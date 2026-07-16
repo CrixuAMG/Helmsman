@@ -26,6 +26,10 @@ struct MainWindow: View {
         .animation(.easeInOut(duration: 0.3), value: viewModel.selectedServiceID)
         .task {
             await viewModel.refresh()
+            viewModel.startPolling()
+        }
+        .onDisappear {
+            viewModel.stopPolling()
         }
         .alert(item: $viewModel.safeModeAlert) { alert in
             Alert(

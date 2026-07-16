@@ -17,10 +17,12 @@ final class MainWindowViewModel {
 
     private let connection: Connection
     private let serviceManager: ServiceManager
+    let pollingEngine: PollingEngine
 
     init(connection: Connection) {
         self.connection = connection
         self.serviceManager = ServiceManager(connection: connection)
+        self.pollingEngine = PollingEngine(interval: connection.pollingInterval)
     }
 
     var filteredServices: [Service] {
@@ -68,6 +70,16 @@ final class MainWindowViewModel {
         retryCount = serviceManager.retryCount
         isLoading = false
         errorAlert = nil
+    }
+
+    func startPolling() {
+        pollingEngine.start(interval: connection.pollingInterval) { [weak self] in
+            await self?.refresh()
+        }
+    }
+
+    func stopPolling() {
+        pollingEngine.stop()
     }
 
     func start(_ service: Service) {
