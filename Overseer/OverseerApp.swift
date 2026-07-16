@@ -1,10 +1,3 @@
-//
-//  OverseerApp.swift
-//  Overseer
-//
-//  Created by Christian Job Kaal on 16/07/2026.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -12,7 +5,7 @@ import SwiftData
 struct OverseerApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Connection.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -25,7 +18,8 @@ struct OverseerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ConnectionWindow()
+                .frame(minWidth: 800, minHeight: 560)
         }
         .modelContainer(sharedModelContainer)
     }
