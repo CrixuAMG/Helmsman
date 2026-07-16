@@ -23,7 +23,7 @@ struct MainWindow: View {
         .toolbar {
             toolbarContent
         }
-        .animation(.easeInOut(duration: 0.3), value: viewModel.selectedServiceID)
+
         .task {
             await viewModel.refresh()
             viewModel.startPolling()
@@ -75,16 +75,13 @@ struct MainWindow: View {
                 onStop: { viewModel.stop(service) },
                 onRestart: { viewModel.restart(service) }
             )
-            .transition(.asymmetric(
-                insertion: .move(edge: .trailing).combined(with: .opacity),
-                removal: .opacity
-            ))
+
         } else {
             VStack(spacing: 16) {
                 Image(systemName: "sidebar.right")
                     .font(.system(size: 48))
                     .foregroundStyle(.secondary)
-                    .symbolEffect(.bounce, options: .repeating)
+
 
                 Text("No Service Selected")
                     .font(.title2)
@@ -95,7 +92,7 @@ struct MainWindow: View {
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .transition(.opacity)
+
         }
     }
 

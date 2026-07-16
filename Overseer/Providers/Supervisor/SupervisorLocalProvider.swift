@@ -17,15 +17,15 @@ final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable
     }
 
     nonisolated func startProcess(_ name: String) async throws {
-        _ = try await executeCommand("start \(Self.shellEscape(name))")
+        _ = try await executeCommand("start \(name)")
     }
 
     nonisolated func stopProcess(_ name: String) async throws {
-        _ = try await executeCommand("stop \(Self.shellEscape(name))")
+        _ = try await executeCommand("stop \(name)")
     }
 
     nonisolated func restartProcess(_ name: String) async throws {
-        _ = try await executeCommand("restart \(Self.shellEscape(name))")
+        _ = try await executeCommand("restart \(name)")
     }
 
     private nonisolated func executeCommand(_ command: String) async throws -> String {

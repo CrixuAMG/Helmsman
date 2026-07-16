@@ -7,13 +7,11 @@ struct ServiceListView: View {
         VStack(spacing: 0) {
             if viewModel.services.isEmpty && !viewModel.isLoading {
                 emptyState
-                    .transition(.opacity.combined(with: .scale))
             } else {
                 serviceList
-                    .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: viewModel.services.isEmpty)
+
         .searchable(text: $viewModel.searchText, prompt: "Search services")
     }
 
@@ -36,14 +34,11 @@ struct ServiceListView: View {
 
                     Button("Restart") { viewModel.restart(service) }
                 }
-                .transition(.asymmetric(
-                    insertion: .move(edge: .leading).combined(with: .opacity),
-                    removal: .move(edge: .trailing).combined(with: .opacity)
-                ))
+
             }
         }
         .listStyle(.inset)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.filteredServices)
+
     }
 
     private var emptyState: some View {
@@ -52,7 +47,7 @@ struct ServiceListView: View {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 48))
                     .foregroundStyle(.orange)
-                    .symbolEffect(.pulse, options: .repeating)
+    
 
                 Text("Connection Error")
                     .font(.title2)
@@ -79,7 +74,7 @@ struct ServiceListView: View {
                 Image(systemName: "tray")
                     .font(.system(size: 48))
                     .foregroundStyle(.secondary)
-                    .symbolEffect(.bounce, options: .repeating)
+
 
                 Text("No Services")
                     .font(.title2)
