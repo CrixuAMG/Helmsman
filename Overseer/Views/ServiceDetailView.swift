@@ -19,6 +19,11 @@ struct ServiceDetailView: View {
             .padding(24)
         }
         .background(.background)
+        .id(service.id)
+        .transition(.asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        ))
     }
 
     private var header: some View {
@@ -31,11 +36,13 @@ struct ServiceDetailView: View {
                 Text(service.name)
                     .font(.title)
                     .fontWeight(.semibold)
+                    .contentTransition(.interpolate)
 
                 if service.group != service.name {
                     Text(service.group)
                         .font(.body)
                         .foregroundStyle(.secondary)
+                        .contentTransition(.interpolate)
                 }
             }
 
@@ -52,6 +59,7 @@ struct ServiceDetailView: View {
             }
             .buttonStyle(.bordered)
         }
+        .animation(.easeInOut(duration: 0.3), value: service.status)
     }
 
     private var statusSection: some View {
@@ -65,6 +73,7 @@ struct ServiceDetailView: View {
                     .font(.title2)
                     .fontWeight(.medium)
                     .foregroundStyle(statusColor)
+                    .contentTransition(.interpolate)
 
                 Spacer()
             }
@@ -73,8 +82,10 @@ struct ServiceDetailView: View {
                 Text(service.description)
                     .font(.body)
                     .foregroundStyle(.secondary)
+                    .transition(.opacity)
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: service.status)
     }
 
     private var detailsSection: some View {
@@ -105,9 +116,11 @@ struct ServiceDetailView: View {
 
             Text(value)
                 .fontWeight(.medium)
+                .contentTransition(.interpolate)
 
             Spacer()
         }
+        .animation(.easeInOut(duration: 0.2), value: value)
     }
 
     private var statusColor: Color {

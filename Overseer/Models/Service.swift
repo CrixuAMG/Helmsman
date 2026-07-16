@@ -1,6 +1,6 @@
 import Foundation
 
-struct Service: Identifiable, Sendable {
+struct Service: Identifiable, Sendable, Equatable {
     let id: String
     let name: String
     let group: String
