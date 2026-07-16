@@ -152,6 +152,28 @@ final class ServiceManager {
         let config = connection.makeProviderConfiguration(password: password)
 
         switch connection.connectionMethod {
+        case .local:
+            let provider = SupervisorLocalProvider(
+                supervisorctlPath: config.supervisorctlPath,
+                timeout: config.timeout
+            )
+            resolvedProvider = provider
+            activeProviderName = "Local"
+            return provider
+
+        case .docker:
+            guard let container = config.dockerContainer, !container.isEmpty else {
+                throw ConnectionError.invalidConfiguration("Docker container name is required")
+            }
+            let provider = SupervisorDockerProvider(
+                container: container,
+                supervisorctlPath: config.supervisorctlPath,
+                timeout: config.timeout
+            )
+            resolvedProvider = provider
+            activeProviderName = "Docker"
+            return provider
+
         case .ssh:
             let provider = try await createSSHProvider(config: config)
             resolvedProvider = provider

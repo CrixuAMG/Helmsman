@@ -9,5 +9,6 @@ struct ProviderConfiguration: Sendable {
     let password: String?
     let supervisorctlPath: String
     let xmlrpcEndpoint: String?
+    let dockerContainer: String?
     let timeout: TimeInterval
 }

@@ -14,6 +14,7 @@ final class Connection {
     var sshKeyPath: String?
     var supervisorctlPath: String
     var xmlrpcEndpoint: String?
+    var dockerContainer: String?
     var connectionMethodRaw: String
     var pollingInterval: TimeInterval
     var timeout: TimeInterval
@@ -41,13 +42,14 @@ final class Connection {
     init(
         name: String,
         accentColorHex: String = "#007AFF",
-        host: String,
+        host: String = "localhost",
         port: Int = 22,
-        username: String,
+        username: String = "",
         authenticationMethod: AuthenticationMethod = .sshKey,
         sshKeyPath: String? = nil,
         supervisorctlPath: String = "/usr/bin/supervisorctl",
         xmlrpcEndpoint: String? = nil,
+        dockerContainer: String? = nil,
         connectionMethod: ConnectionMethod = .auto,
         pollingInterval: TimeInterval = 5,
         timeout: TimeInterval = 30,
@@ -65,6 +67,7 @@ final class Connection {
         self.sshKeyPath = sshKeyPath
         self.supervisorctlPath = supervisorctlPath
         self.xmlrpcEndpoint = xmlrpcEndpoint
+        self.dockerContainer = dockerContainer
         self.connectionMethodRaw = connectionMethod.rawValue
         self.pollingInterval = pollingInterval
         self.timeout = timeout
@@ -85,6 +88,7 @@ final class Connection {
             password: password,
             supervisorctlPath: supervisorctlPath,
             xmlrpcEndpoint: xmlrpcEndpoint,
+            dockerContainer: dockerContainer,
             timeout: timeout
         )
     }

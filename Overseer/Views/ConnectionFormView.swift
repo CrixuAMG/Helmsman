@@ -51,15 +51,6 @@ struct ConnectionFormView: View {
 
     private var serverSection: some View {
         FormSection(title: "Server") {
-            FormField(label: "Host") {
-                TextField("192.168.1.100", text: $viewModel.host)
-            }
-
-            FormField(label: "Port") {
-                TextField("22", value: $viewModel.port, format: .number)
-                    .frame(width: 100)
-            }
-
             FormField(label: "Connection Method") {
                 Picker("", selection: $viewModel.connectionMethod) {
                     ForEach(ConnectionMethod.allCases, id: \.self) { method in
@@ -69,47 +60,67 @@ struct ConnectionFormView: View {
                 .labelsHidden()
                 .frame(width: 200)
             }
+
+            if viewModel.connectionMethod == .docker {
+                FormField(label: "Container") {
+                    TextField("my-supervisor-container", text: $viewModel.dockerContainer)
+                }
+            }
+
+            if viewModel.connectionMethod == .ssh || viewModel.connectionMethod == .xmlrpc || viewModel.connectionMethod == .auto {
+                FormField(label: "Host") {
+                    TextField("192.168.1.100", text: $viewModel.host)
+                }
+
+                FormField(label: "Port") {
+                    TextField("22", value: $viewModel.port, format: .number)
+                        .frame(width: 100)
+                }
+            }
         }
     }
 
     // MARK: - Authentication
 
+    @ViewBuilder
     private var authenticationSection: some View {
-        FormSection(title: "Authentication") {
-            FormField(label: "Username") {
-                TextField("root", text: $viewModel.username)
-            }
-
-            FormField(label: "Method") {
-                Picker("", selection: $viewModel.authenticationMethod) {
-                    ForEach(AuthenticationMethod.allCases, id: \.self) { method in
-                        Text(method.displayName).tag(method)
-                    }
+        if viewModel.connectionMethod == .ssh || viewModel.connectionMethod == .xmlrpc || viewModel.connectionMethod == .auto {
+            FormSection(title: "Authentication") {
+                FormField(label: "Username") {
+                    TextField("root", text: $viewModel.username)
                 }
-                .labelsHidden()
-                .frame(width: 200)
-            }
 
-            if viewModel.authenticationMethod == .sshKey {
-                FormField(label: "SSH Key Path") {
-                    HStack {
-                        TextField("~/.ssh/id_rsa", text: $viewModel.sshKeyPath)
+                FormField(label: "Method") {
+                    Picker("", selection: $viewModel.authenticationMethod) {
+                        ForEach(AuthenticationMethod.allCases, id: \.self) { method in
+                            Text(method.displayName).tag(method)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 200)
+                }
 
-                        Button("Browse") {
-                            let panel = NSOpenPanel()
-                            panel.allowsMultipleSelection = false
-                            panel.canChooseDirectories = false
-                            panel.canChooseFiles = true
-                            if panel.runModal() == .OK, let url = panel.url {
-                                viewModel.sshKeyPath = url.path
+                if viewModel.authenticationMethod == .sshKey {
+                    FormField(label: "SSH Key Path") {
+                        HStack {
+                            TextField("~/.ssh/id_rsa", text: $viewModel.sshKeyPath)
+
+                            Button("Browse") {
+                                let panel = NSOpenPanel()
+                                panel.allowsMultipleSelection = false
+                                panel.canChooseDirectories = false
+                                panel.canChooseFiles = true
+                                if panel.runModal() == .OK, let url = panel.url {
+                                    viewModel.sshKeyPath = url.path
+                                }
                             }
                         }
                     }
-                }
-            } else {
-                FormField(label: "Password") {
-                    SecureField("Password", text: $viewModel.password)
-                        .frame(width: 300)
+                } else {
+                    FormField(label: "Password") {
+                        SecureField("Password", text: $viewModel.password)
+                            .frame(width: 300)
+                    }
                 }
             }
         }
@@ -173,7 +184,20 @@ struct ConnectionFormView: View {
             }
             .keyboardShortcut("s", modifiers: .command)
             .buttonStyle(.borderedProminent)
-            .disabled(viewModel.name.isEmpty || viewModel.host.isEmpty)
+            .disabled(!isFormValid)
+        }
+    }
+
+    private var isFormValid: Bool {
+        if viewModel.name.isEmpty { return false }
+
+        switch viewModel.connectionMethod {
+        case .local:
+            return true
+        case .docker:
+            return !viewModel.dockerContainer.isEmpty
+        case .ssh, .xmlrpc, .auto:
+            return !viewModel.host.isEmpty
         }
     }
 }

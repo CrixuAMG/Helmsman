@@ -17,6 +17,7 @@ final class ConnectionWindowViewModel {
     var password: String = ""
     var supervisorctlPath: String = "/usr/bin/supervisorctl"
     var xmlrpcEndpoint: String = ""
+    var dockerContainer: String = ""
     var connectionMethod: ConnectionMethod = .auto
     var pollingInterval: TimeInterval = 5
     var timeout: TimeInterval = 30
@@ -65,6 +66,7 @@ final class ConnectionWindowViewModel {
             existing.sshKeyPath = sshKeyPath.isEmpty ? nil : sshKeyPath
             existing.supervisorctlPath = supervisorctlPath
             existing.xmlrpcEndpoint = xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint
+            existing.dockerContainer = dockerContainer.isEmpty ? nil : dockerContainer
             existing.connectionMethod = connectionMethod
             existing.pollingInterval = pollingInterval
             existing.timeout = timeout
@@ -87,6 +89,7 @@ final class ConnectionWindowViewModel {
                 sshKeyPath: sshKeyPath.isEmpty ? nil : sshKeyPath,
                 supervisorctlPath: supervisorctlPath,
                 xmlrpcEndpoint: xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint,
+                dockerContainer: dockerContainer.isEmpty ? nil : dockerContainer,
                 connectionMethod: connectionMethod,
                 pollingInterval: pollingInterval,
                 timeout: timeout,
@@ -128,6 +131,7 @@ final class ConnectionWindowViewModel {
         password = KeychainManager.retrievePassword(for: connection.id) ?? ""
         supervisorctlPath = connection.supervisorctlPath
         xmlrpcEndpoint = connection.xmlrpcEndpoint ?? ""
+        dockerContainer = connection.dockerContainer ?? ""
         connectionMethod = connection.connectionMethod
         pollingInterval = connection.pollingInterval
         timeout = connection.timeout
@@ -147,6 +151,7 @@ final class ConnectionWindowViewModel {
         password = ""
         supervisorctlPath = "/usr/bin/supervisorctl"
         xmlrpcEndpoint = ""
+        dockerContainer = ""
         connectionMethod = .auto
         pollingInterval = 5
         timeout = 30
