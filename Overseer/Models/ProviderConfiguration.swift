@@ -8,6 +8,7 @@ struct ProviderConfiguration: Sendable {
     let sshKeyPath: String?
     let password: String?
     let supervisorctlPath: String
+    let supervisorConfigPath: String?
     let xmlrpcEndpoint: String?
     let dockerContainer: String?
     let timeout: TimeInterval

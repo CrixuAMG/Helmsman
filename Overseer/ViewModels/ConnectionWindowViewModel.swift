@@ -16,6 +16,7 @@ final class ConnectionWindowViewModel {
     var sshKeyPath: String = ""
     var password: String = ""
     var supervisorctlPath: String = "/usr/bin/supervisorctl"
+    var supervisorConfigPath: String = ""
     var xmlrpcEndpoint: String = ""
     var dockerContainer: String = ""
     var connectionMethod: ConnectionMethod = .auto
@@ -74,6 +75,7 @@ final class ConnectionWindowViewModel {
             existing.authenticationMethod = authenticationMethod
             existing.sshKeyPath = sshKeyPath.isEmpty ? nil : sshKeyPath
             existing.supervisorctlPath = supervisorctlPath
+            existing.supervisorConfigPath = supervisorConfigPath.isEmpty ? nil : supervisorConfigPath
             existing.xmlrpcEndpoint = xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint
             existing.dockerContainer = dockerContainer.isEmpty ? nil : dockerContainer
             existing.connectionMethod = connectionMethod
@@ -97,6 +99,7 @@ final class ConnectionWindowViewModel {
                 authenticationMethod: authenticationMethod,
                 sshKeyPath: sshKeyPath.isEmpty ? nil : sshKeyPath,
                 supervisorctlPath: supervisorctlPath,
+                supervisorConfigPath: supervisorConfigPath.isEmpty ? nil : supervisorConfigPath,
                 xmlrpcEndpoint: xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint,
                 dockerContainer: dockerContainer.isEmpty ? nil : dockerContainer,
                 connectionMethod: connectionMethod,
@@ -147,6 +150,7 @@ final class ConnectionWindowViewModel {
             sshKeyPath: sshKeyPath.isEmpty ? nil : sshKeyPath,
             password: password.isEmpty ? nil : password,
             supervisorctlPath: supervisorctlPath,
+            supervisorConfigPath: supervisorConfigPath.isEmpty ? nil : supervisorConfigPath,
             xmlrpcEndpoint: xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint,
             dockerContainer: dockerContainer.isEmpty ? nil : dockerContainer,
             timeout: timeout
@@ -159,6 +163,7 @@ final class ConnectionWindowViewModel {
             case .local:
                 provider = SupervisorLocalProvider(
                     supervisorctlPath: config.supervisorctlPath,
+                    supervisorConfigPath: config.supervisorConfigPath,
                     timeout: config.timeout
                 )
             case .docker:
@@ -220,6 +225,7 @@ final class ConnectionWindowViewModel {
         sshKeyPath = connection.sshKeyPath ?? ""
         password = KeychainManager.retrievePassword(for: connection.id) ?? ""
         supervisorctlPath = connection.supervisorctlPath
+        supervisorConfigPath = connection.supervisorConfigPath ?? ""
         xmlrpcEndpoint = connection.xmlrpcEndpoint ?? ""
         dockerContainer = connection.dockerContainer ?? ""
         connectionMethod = connection.connectionMethod
@@ -240,6 +246,7 @@ final class ConnectionWindowViewModel {
         sshKeyPath = ""
         password = ""
         supervisorctlPath = "/usr/bin/supervisorctl"
+        supervisorConfigPath = ""
         xmlrpcEndpoint = ""
         dockerContainer = ""
         connectionMethod = .auto

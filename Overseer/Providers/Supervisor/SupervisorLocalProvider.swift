@@ -2,10 +2,12 @@ import Foundation
 
 final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable {
     private let supervisorctlPath: String
+    private let supervisorConfigPath: String?
     private let timeout: TimeInterval
 
-    init(supervisorctlPath: String, timeout: TimeInterval) {
+    init(supervisorctlPath: String, supervisorConfigPath: String? = nil, timeout: TimeInterval) {
         self.supervisorctlPath = supervisorctlPath
+        self.supervisorConfigPath = supervisorConfigPath
         self.timeout = timeout
     }
 
@@ -38,7 +40,13 @@ final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: resolvedPath)
-        process.arguments = command.split(separator: " ").map(String.init)
+        
+        var args: [String] = []
+        if let configPath = supervisorConfigPath {
+            args.append(contentsOf: ["-c", configPath])
+        }
+        args.append(contentsOf: command.split(separator: " ").map(String.init))
+        process.arguments = args
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()

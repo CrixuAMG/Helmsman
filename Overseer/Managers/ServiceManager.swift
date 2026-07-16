@@ -155,6 +155,7 @@ final class ServiceManager {
         case .local:
             let provider = SupervisorLocalProvider(
                 supervisorctlPath: config.supervisorctlPath,
+                supervisorConfigPath: config.supervisorConfigPath,
                 timeout: config.timeout
             )
             resolvedProvider = provider

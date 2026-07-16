@@ -140,6 +140,22 @@ struct ConnectionFormView: View {
                 }
             }
 
+            FormField(label: "Config File Path") {
+                HStack {
+                    TextField("supervisord.conf (optional)", text: $viewModel.supervisorConfigPath)
+
+                    Button("Browse") {
+                        let panel = NSOpenPanel()
+                        panel.allowsMultipleSelection = false
+                        panel.canChooseDirectories = false
+                        panel.canChooseFiles = true
+                        if panel.runModal() == .OK, let url = panel.url {
+                            viewModel.supervisorConfigPath = url.path
+                        }
+                    }
+                }
+            }
+
             FormField(label: "XML-RPC Endpoint") {
                 TextField("http://localhost:9001/RPC2", text: $viewModel.xmlrpcEndpoint)
             }

@@ -13,6 +13,7 @@ final class Connection {
     var authenticationMethodRaw: String
     var sshKeyPath: String?
     var supervisorctlPath: String
+    var supervisorConfigPath: String?
     var xmlrpcEndpoint: String?
     var dockerContainer: String?
     var connectionMethodRaw: String
@@ -48,6 +49,7 @@ final class Connection {
         authenticationMethod: AuthenticationMethod = .sshKey,
         sshKeyPath: String? = nil,
         supervisorctlPath: String = "/usr/bin/supervisorctl",
+        supervisorConfigPath: String? = nil,
         xmlrpcEndpoint: String? = nil,
         dockerContainer: String? = nil,
         connectionMethod: ConnectionMethod = .auto,
@@ -66,6 +68,7 @@ final class Connection {
         self.authenticationMethodRaw = authenticationMethod.rawValue
         self.sshKeyPath = sshKeyPath
         self.supervisorctlPath = supervisorctlPath
+        self.supervisorConfigPath = supervisorConfigPath
         self.xmlrpcEndpoint = xmlrpcEndpoint
         self.dockerContainer = dockerContainer
         self.connectionMethodRaw = connectionMethod.rawValue
@@ -87,6 +90,7 @@ final class Connection {
             sshKeyPath: sshKeyPath,
             password: password,
             supervisorctlPath: supervisorctlPath,
+            supervisorConfigPath: supervisorConfigPath,
             xmlrpcEndpoint: xmlrpcEndpoint,
             dockerContainer: dockerContainer,
             timeout: timeout
