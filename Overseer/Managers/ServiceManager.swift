@@ -109,6 +109,15 @@ final class ServiceManager {
     }
 
     private func createXMLRPCProvider(config: ProviderConfiguration) async throws -> any ServiceManagerProvider {
-        throw ServiceError.providerUnavailable
+        guard let endpointStr = config.xmlrpcEndpoint, let endpoint = URL(string: endpointStr) else {
+            throw ConnectionError.invalidConfiguration("XML-RPC endpoint is required")
+        }
+
+        return SupervisorXMLRPCProvider(
+            endpoint: endpoint,
+            username: config.username,
+            password: config.password,
+            timeout: config.timeout
+        )
     }
 }
