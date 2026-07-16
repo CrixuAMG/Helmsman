@@ -29,12 +29,13 @@ final class SupervisorDockerProvider: ServiceManagerProvider, @unchecked Sendabl
     }
 
     private nonisolated func executeCommand(_ command: String) async throws -> String {
-        guard FileManager.default.fileExists(atPath: "/usr/bin/docker") else {
-            throw ConnectionError.invalidConfiguration("Docker not found at /usr/bin/docker")
+        let dockerPaths = ["/usr/local/bin/docker", "/opt/homebrew/bin/docker", "/usr/bin/docker"]
+        guard let dockerPath = dockerPaths.first(where: { FileManager.default.fileExists(atPath: $0) }) else {
+            throw ConnectionError.invalidConfiguration("Docker not found. Install Docker or specify the path in your connection settings.")
         }
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/docker")
+        process.executableURL = URL(fileURLWithPath: dockerPath)
         process.arguments = ["exec", container, supervisorctlPath] + command.split(separator: " ").map(String.init)
 
         let stdoutPipe = Pipe()
