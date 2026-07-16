@@ -27,6 +27,10 @@ final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable
     }
 
     private nonisolated func executeCommand(_ command: String) async throws -> String {
+        guard FileManager.default.fileExists(atPath: supervisorctlPath) else {
+            throw ConnectionError.invalidConfiguration("supervisorctl not found at \(supervisorctlPath)")
+        }
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: supervisorctlPath)
         process.arguments = command.split(separator: " ").map(String.init)

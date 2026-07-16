@@ -24,14 +24,6 @@ struct OverseerApp: App {
                 .frame(minWidth: 800, minHeight: 560)
         }
         .modelContainer(sharedModelContainer)
-        .commands {
-            CommandGroup(replacing: .appSettings) {
-                Button("Settings...") {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                }
-                .keyboardShortcut(",", modifiers: .command)
-            }
-        }
 
         Settings {
             SettingsWindow()

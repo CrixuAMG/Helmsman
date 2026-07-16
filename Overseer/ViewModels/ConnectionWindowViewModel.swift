@@ -25,7 +25,15 @@ final class ConnectionWindowViewModel {
     var safeMode: Bool = true
     var notes: String = ""
 
+    var isTesting: Bool = false
+    var testResult: TestResult?
+
     private var connectionManager: ConnectionManager?
+
+    enum TestResult {
+        case success(String)
+        case failure(String)
+    }
 
     func setConnectionManager(_ manager: ConnectionManager) {
         self.connectionManager = manager
@@ -118,6 +126,81 @@ final class ConnectionWindowViewModel {
 
     func duplicate(_ connection: Connection) {
         _ = connectionManager?.duplicate(connection)
+    }
+
+    func testConnection() async {
+        isTesting = true
+        testResult = nil
+
+        let config = ProviderConfiguration(
+            host: host,
+            port: port,
+            username: username,
+            authenticationMethod: authenticationMethod,
+            sshKeyPath: sshKeyPath.isEmpty ? nil : sshKeyPath,
+            password: password.isEmpty ? nil : password,
+            supervisorctlPath: supervisorctlPath,
+            xmlrpcEndpoint: xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint,
+            dockerContainer: dockerContainer.isEmpty ? nil : dockerContainer,
+            timeout: timeout
+        )
+
+        do {
+            let provider: any ServiceManagerProvider
+
+            switch connectionMethod {
+            case .local:
+                provider = SupervisorLocalProvider(
+                    supervisorctlPath: config.supervisorctlPath,
+                    timeout: config.timeout
+                )
+            case .docker:
+                guard let container = config.dockerContainer, !container.isEmpty else {
+                    testResult = .failure("Docker container name is required")
+                    isTesting = false
+                    return
+                }
+                provider = SupervisorDockerProvider(
+                    container: container,
+                    supervisorctlPath: config.supervisorctlPath,
+                    timeout: config.timeout
+                )
+            case .ssh:
+                provider = SupervisorSSHProvider(
+                    host: config.host,
+                    port: config.port,
+                    username: config.username,
+                    authenticationMethod: config.authenticationMethod,
+                    sshKeyPath: config.sshKeyPath,
+                    password: config.password,
+                    supervisorctlPath: config.supervisorctlPath,
+                    timeout: config.timeout
+                )
+            case .xmlrpc:
+                guard let endpointStr = config.xmlrpcEndpoint, let endpoint = URL(string: endpointStr) else {
+                    testResult = .failure("Valid XML-RPC endpoint is required")
+                    isTesting = false
+                    return
+                }
+                provider = SupervisorXMLRPCProvider(
+                    endpoint: endpoint,
+                    username: config.username,
+                    password: config.password,
+                    timeout: config.timeout
+                )
+            case .auto:
+                testResult = .failure("Please select a specific connection method to test")
+                isTesting = false
+                return
+            }
+
+            let processes = try await provider.getAllProcesses()
+            testResult = .success("Connected successfully. Found \(processes.count) service(s).")
+        } catch {
+            testResult = .failure(error.localizedDescription)
+        }
+
+        isTesting = false
     }
 
     private func populateForm(from connection: Connection) {

@@ -114,12 +114,20 @@ struct ConnectionWindow: View {
             }
             .font(.body)
 
-            Button("Connect") {
-                openWindow(id: "main-window", value: connection.id)
+            HStack(spacing: 12) {
+                Button("Edit") {
+                    viewModel.selectConnection(connection)
+                }
+                .buttonStyle(.bordered)
+                .keyboardShortcut("e", modifiers: .command)
+
+                Button("Connect") {
+                    openWindow(id: "main-window", value: connection.id)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .keyboardShortcut(.return, modifiers: .command)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .keyboardShortcut(.return, modifiers: .command)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)

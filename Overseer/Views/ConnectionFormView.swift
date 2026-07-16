@@ -170,21 +170,59 @@ struct ConnectionFormView: View {
     // MARK: - Actions
 
     private var actionsBar: some View {
-        HStack {
-            Spacer()
-
-            Button("Cancel") {
-                viewModel.isEditing = false
+        VStack(spacing: 12) {
+            if let result = viewModel.testResult {
+                HStack {
+                    switch result {
+                    case .success(let message):
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text(message)
+                            .foregroundStyle(.green)
+                    case .failure(let message):
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.red)
+                        Text(message)
+                            .foregroundStyle(.red)
+                    }
+                    Spacer()
+                }
+                .font(.callout)
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(.regularMaterial)
+                )
             }
-            .keyboardShortcut(.escape, modifiers: [])
 
-            Button("Save") {
-                viewModel.save()
-                viewModel.isEditing = false
+            HStack {
+                Button("Test Connection") {
+                    Task { await viewModel.testConnection() }
+                }
+                .disabled(viewModel.isTesting || !isFormValid)
+
+                if viewModel.isTesting {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+
+                Spacer()
+
+                Button("Cancel") {
+                    viewModel.isEditing = false
+                    viewModel.testResult = nil
+                }
+                .keyboardShortcut(.escape, modifiers: [])
+
+                Button("Save") {
+                    viewModel.save()
+                    viewModel.isEditing = false
+                    viewModel.testResult = nil
+                }
+                .keyboardShortcut("s", modifiers: .command)
+                .buttonStyle(.borderedProminent)
+                .disabled(!isFormValid)
             }
-            .keyboardShortcut("s", modifiers: .command)
-            .buttonStyle(.borderedProminent)
-            .disabled(!isFormValid)
         }
     }
 
