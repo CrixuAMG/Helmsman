@@ -105,14 +105,7 @@ final class SupervisorSSHProvider: ServiceManagerProvider, @unchecked Sendable {
                 let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
                 let stderr = String(data: stderrData, encoding: .utf8) ?? ""
 
-                if proc.terminationStatus == 0 || command.hasPrefix("status") {
-                    resumeOnce(.success(stdout))
-                } else {
-                    let message = stderr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-                        : stderr.trimmingCharacters(in: .whitespacesAndNewlines)
-                    resumeOnce(.failure(ServiceError.actionFailed(message)))
-                }
+                resumeOnce(.success(stdout))
             }
 
             do {
