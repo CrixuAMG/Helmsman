@@ -3,6 +3,7 @@ import SwiftData
 
 struct ConnectionWindow: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
     @Query(sort: \Connection.name) private var connections: [Connection]
     @State private var viewModel = ConnectionWindowViewModel()
 
@@ -69,10 +70,59 @@ struct ConnectionWindow: View {
         Group {
             if viewModel.isEditing {
                 ConnectionFormView(viewModel: viewModel)
+            } else if let id = viewModel.selectedConnectionID,
+                      let connection = connections.first(where: { $0.id == id }) {
+                connectionDetail(connection)
             } else {
                 emptyState
             }
         }
+    }
+
+    private func connectionDetail(_ connection: Connection) -> some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(connection.accentColor)
+                    .frame(width: 6, height: 48)
+
+                Text(connection.name)
+                    .font(.title)
+                    .fontWeight(.semibold)
+
+                Text("\(connection.username)@\(connection.host):\(connection.port)")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Method:")
+                        .foregroundStyle(.secondary)
+                    Text(connection.connectionMethod.displayName)
+                }
+                HStack {
+                    Text("Authentication:")
+                        .foregroundStyle(.secondary)
+                    Text(connection.authenticationMethod.displayName)
+                }
+                if connection.safeMode {
+                    Label("Safe Mode Enabled", systemImage: "shield.fill")
+                        .foregroundStyle(.orange)
+                        .font(.caption)
+                }
+            }
+            .font(.body)
+
+            Button("Connect") {
+                openWindow(id: "main-window", value: connection.id)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .keyboardShortcut(.return, modifiers: .command)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.background)
     }
 
     private var emptyState: some View {
