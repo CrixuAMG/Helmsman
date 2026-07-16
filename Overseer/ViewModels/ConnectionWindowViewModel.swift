@@ -59,6 +59,7 @@ final class ConnectionWindowViewModel {
         selectedConnectionID = nil
         isEditing = true
         resetForm()
+        Task { await detectSupervisorctlPath() }
     }
 
     func save() {
@@ -126,6 +127,12 @@ final class ConnectionWindowViewModel {
 
     func duplicate(_ connection: Connection) {
         _ = connectionManager?.duplicate(connection)
+    }
+
+    func detectSupervisorctlPath() async {
+        if let path = await SupervisorctlFinder.find() {
+            supervisorctlPath = path
+        }
     }
 
     func testConnection() async {

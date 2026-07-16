@@ -131,7 +131,13 @@ struct ConnectionFormView: View {
     private var supervisorSection: some View {
         FormSection(title: "Supervisor") {
             FormField(label: "supervisorctl Path") {
-                TextField("/usr/bin/supervisorctl", text: $viewModel.supervisorctlPath)
+                HStack {
+                    TextField("/usr/bin/supervisorctl", text: $viewModel.supervisorctlPath)
+
+                    Button("Detect") {
+                        Task { await viewModel.detectSupervisorctlPath() }
+                    }
+                }
             }
 
             FormField(label: "XML-RPC Endpoint") {
