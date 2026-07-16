@@ -5,15 +5,20 @@ struct ConnectionFormView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 32) {
                 generalSection
+                Divider()
                 serverSection
+                Divider()
                 authenticationSection
+                Divider()
                 supervisorSection
+                Divider()
                 optionsSection
+                Divider()
                 actionsBar
             }
-            .padding(24)
+            .padding(32)
         }
         .background(.background)
     }

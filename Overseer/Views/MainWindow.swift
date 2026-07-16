@@ -102,13 +102,25 @@ struct MainWindow: View {
     private var sidebar: some View {
         List {
             Section("Connection") {
-                Label(connection.name, systemImage: "server.rack")
-                    .foregroundStyle(connection.accentColor)
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(connection.accentColor)
+                        .frame(width: 4, height: 20)
+                    
+                    Label(connection.name, systemImage: "server.rack")
+                        .foregroundStyle(.primary)
+                }
 
                 if let provider = viewModel.activeProviderName {
-                    Label(provider, systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                        .font(.caption)
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .font(.caption)
+                        Text(provider)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.leading, 4)
                 }
             }
 
@@ -119,13 +131,25 @@ struct MainWindow: View {
                     Circle()
                         .fill(viewModel.isConnected ? .green : .red)
                         .frame(width: 8, height: 8)
+                        .shadow(color: viewModel.isConnected ? .green.opacity(0.5) : .red.opacity(0.5), radius: 4)
                 }
 
                 HStack {
                     Text("Services")
                     Spacer()
                     Text("\(viewModel.services.count)")
+                        .font(.system(.body, design: .monospaced))
                         .foregroundStyle(.secondary)
+                }
+                
+                if viewModel.pollingEngine.isPolling {
+                    HStack {
+                        Text("Auto-refresh")
+                        Spacer()
+                        Text("\(Int(connection.pollingInterval))s")
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }

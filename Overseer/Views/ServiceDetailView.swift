@@ -94,17 +94,30 @@ struct ServiceDetailView: View {
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(spacing: 0) {
                 detailRow("PID", value: service.pid > 0 ? "\(service.pid)" : "—")
+                
+                Divider()
+                    .padding(.leading, 120)
 
                 detailRow("Uptime", value: formatUptime(service.uptime))
-
+                
                 if let exitStatus = service.exitStatus {
+                    Divider()
+                        .padding(.leading, 120)
                     detailRow("Exit Status", value: "\(exitStatus)")
                 }
+                
+                Divider()
+                    .padding(.leading, 120)
 
                 detailRow("Last Updated", value: service.lastUpdated.formatted(date: .abbreviated, time: .standard))
             }
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.primary.opacity(0.03))
+            )
         }
     }
 
@@ -116,10 +129,13 @@ struct ServiceDetailView: View {
 
             Text(value)
                 .fontWeight(.medium)
+                .font(.system(.body, design: .monospaced))
                 .contentTransition(.interpolate)
 
             Spacer()
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .animation(.easeInOut(duration: 0.2), value: value)
     }
 
