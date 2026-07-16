@@ -3,6 +3,8 @@ import SwiftData
 
 @main
 struct OverseerApp: App {
+    @StateObject private var settings = AppSettings.shared
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Connection.self,
@@ -22,6 +24,18 @@ struct OverseerApp: App {
                 .frame(minWidth: 800, minHeight: 560)
         }
         .modelContainer(sharedModelContainer)
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings...") {
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
+
+        Settings {
+            SettingsWindow()
+        }
 
         WindowGroup(id: "main-window", for: UUID.self) { $connectionID in
             if let connectionID = connectionID {
