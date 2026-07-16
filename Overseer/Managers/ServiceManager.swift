@@ -8,15 +8,21 @@ final class ServiceManager {
     var activeProviderName: String?
     var lastError: Error?
     var isLoading: Bool = false
+    var retryCount: Int = 0
 
     private let connection: Connection
     private var resolvedProvider: (any ServiceManagerProvider)?
+    private let maxRetries = 3
 
     init(connection: Connection) {
         self.connection = connection
     }
 
     func refresh() async {
+        await refresh(withRetry: true)
+    }
+
+    private func refresh(withRetry: Bool) async {
         isLoading = true
         defer { isLoading = false }
 
@@ -37,25 +43,104 @@ final class ServiceManager {
             }
             isConnected = true
             lastError = nil
+            retryCount = 0
         } catch {
             lastError = error
             isConnected = false
+
+            if withRetry && shouldRetry(error: error) && retryCount < maxRetries {
+                retryCount += 1
+                let delay = Double(retryCount) * 2.0
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                await refresh(withRetry: true)
+            }
         }
     }
 
     func start(_ service: Service) async throws {
         guard let provider = resolvedProvider else { throw ServiceError.providerUnavailable }
-        try await provider.startProcess(service.name)
+        do {
+            try await provider.startProcess(service.name)
+        } catch {
+            if shouldReconnect(error: error) {
+                resolvedProvider = nil
+                let newProvider = try await resolveProvider()
+                try await newProvider.startProcess(service.name)
+            } else {
+                throw error
+            }
+        }
     }
 
     func stop(_ service: Service) async throws {
         guard let provider = resolvedProvider else { throw ServiceError.providerUnavailable }
-        try await provider.stopProcess(service.name)
+        do {
+            try await provider.stopProcess(service.name)
+        } catch {
+            if shouldReconnect(error: error) {
+                resolvedProvider = nil
+                let newProvider = try await resolveProvider()
+                try await newProvider.stopProcess(service.name)
+            } else {
+                throw error
+            }
+        }
     }
 
     func restart(_ service: Service) async throws {
         guard let provider = resolvedProvider else { throw ServiceError.providerUnavailable }
-        try await provider.restartProcess(service.name)
+        do {
+            try await provider.restartProcess(service.name)
+        } catch {
+            if shouldReconnect(error: error) {
+                resolvedProvider = nil
+                let newProvider = try await resolveProvider()
+                try await newProvider.restartProcess(service.name)
+            } else {
+                throw error
+            }
+        }
+    }
+
+    func reconnect() async {
+        resolvedProvider = nil
+        retryCount = 0
+        await refresh()
+    }
+
+    // MARK: - Error Handling
+
+    private func shouldRetry(error: Error) -> Bool {
+        if let connectionError = error as? ConnectionError {
+            switch connectionError {
+            case .timeout, .connectionRefused:
+                return true
+            default:
+                return false
+            }
+        }
+
+        if let serviceError = error as? ServiceError {
+            switch serviceError {
+            case .connectionLost:
+                return true
+            default:
+                return false
+            }
+        }
+
+        let nsError = error as NSError
+        let networkCodes = [NSURLErrorTimedOut, NSURLErrorNetworkConnectionLost, NSURLErrorCannotConnectToHost]
+        return networkCodes.contains(nsError.code)
+    }
+
+    private func shouldReconnect(error: Error) -> Bool {
+        if let serviceError = error as? ServiceError {
+            return serviceError == .connectionLost
+        }
+
+        let nsError = error as NSError
+        return nsError.code == NSURLErrorNetworkConnectionLost
     }
 
     // MARK: - Provider Resolution

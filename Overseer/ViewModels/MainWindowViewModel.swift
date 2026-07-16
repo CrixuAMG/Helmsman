@@ -10,8 +10,10 @@ final class MainWindowViewModel {
     var activeProviderName: String?
     var lastError: Error?
     var searchText: String = ""
+    var retryCount: Int = 0
 
     var safeModeAlert: SafeModeAlert?
+    var errorAlert: ErrorAlert?
 
     private let connection: Connection
     private let serviceManager: ServiceManager
@@ -38,7 +40,34 @@ final class MainWindowViewModel {
         isConnected = serviceManager.isConnected
         activeProviderName = serviceManager.activeProviderName
         lastError = serviceManager.lastError
+        retryCount = serviceManager.retryCount
         isLoading = false
+
+        if let error = lastError {
+            errorAlert = ErrorAlert(
+                title: "Connection Error",
+                message: error.localizedDescription,
+                retryCount: retryCount,
+                onRetry: { [weak self] in
+                    await self?.refresh()
+                },
+                onReconnect: { [weak self] in
+                    await self?.reconnect()
+                }
+            )
+        }
+    }
+
+    func reconnect() async {
+        isLoading = true
+        await serviceManager.reconnect()
+        services = serviceManager.services
+        isConnected = serviceManager.isConnected
+        activeProviderName = serviceManager.activeProviderName
+        lastError = serviceManager.lastError
+        retryCount = serviceManager.retryCount
+        isLoading = false
+        errorAlert = nil
     }
 
     func start(_ service: Service) {
@@ -88,7 +117,15 @@ final class MainWindowViewModel {
             try await serviceManager.start(service)
             await refresh()
         } catch {
-            lastError = error
+            errorAlert = ErrorAlert(
+                title: "Action Failed",
+                message: "Failed to start '\(service.name)': \(error.localizedDescription)",
+                retryCount: 0,
+                onRetry: { [weak self] in
+                    await self?.performStart(service)
+                },
+                onReconnect: nil
+            )
         }
     }
 
@@ -97,7 +134,15 @@ final class MainWindowViewModel {
             try await serviceManager.stop(service)
             await refresh()
         } catch {
-            lastError = error
+            errorAlert = ErrorAlert(
+                title: "Action Failed",
+                message: "Failed to stop '\(service.name)': \(error.localizedDescription)",
+                retryCount: 0,
+                onRetry: { [weak self] in
+                    await self?.performStop(service)
+                },
+                onReconnect: nil
+            )
         }
     }
 
@@ -106,7 +151,15 @@ final class MainWindowViewModel {
             try await serviceManager.restart(service)
             await refresh()
         } catch {
-            lastError = error
+            errorAlert = ErrorAlert(
+                title: "Action Failed",
+                message: "Failed to restart '\(service.name)': \(error.localizedDescription)",
+                retryCount: 0,
+                onRetry: { [weak self] in
+                    await self?.performRestart(service)
+                },
+                onReconnect: nil
+            )
         }
     }
 }
@@ -116,4 +169,13 @@ struct SafeModeAlert: Identifiable {
     let title: String
     let message: String
     let action: () async -> Void
+}
+
+struct ErrorAlert: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+    let retryCount: Int
+    let onRetry: () async -> Void
+    let onReconnect: (() async -> Void)?
 }

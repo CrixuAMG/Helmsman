@@ -37,6 +37,28 @@ struct MainWindow: View {
                 secondaryButton: .cancel()
             )
         }
+        .alert(item: $viewModel.errorAlert) { alert in
+            if let onReconnect = alert.onReconnect {
+                return Alert(
+                    title: Text(alert.title),
+                    message: Text(alert.message + (alert.retryCount > 0 ? "\n\nRetry attempt \(alert.retryCount) of 3" : "")),
+                    primaryButton: .default(Text("Retry")) {
+                        Task { await alert.onRetry() }
+                    },
+                    secondaryButton: .default(Text("Reconnect")) {
+                        Task { await onReconnect() }
+                    }
+                )
+            } else {
+                return Alert(
+                    title: Text(alert.title),
+                    message: Text(alert.message),
+                    dismissButton: .default(Text("OK")) {
+                        Task { await alert.onRetry() }
+                    }
+                )
+            }
+        }
     }
 
     @ViewBuilder

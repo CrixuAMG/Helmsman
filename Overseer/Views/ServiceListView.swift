@@ -62,6 +62,19 @@ struct ServiceListView: View {
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+
+                HStack(spacing: 12) {
+                    Button("Retry") {
+                        Task { await viewModel.refresh() }
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Reconnect") {
+                        Task { await viewModel.reconnect() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding(.top, 8)
             } else {
                 Image(systemName: "tray")
                     .font(.system(size: 48))

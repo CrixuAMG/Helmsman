@@ -1,6 +1,6 @@
 import Foundation
 
-enum ServiceError: LocalizedError {
+enum ServiceError: LocalizedError, Equatable {
     case notFound(String)
     case alreadyRunning(String)
     case alreadyStopped(String)
