@@ -49,6 +49,10 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(defaultTimeout, forKey: "app.defaultTimeout") }
     }
 
+    @Published var hasCompletedOnboarding: Bool = false {
+        didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "app.hasCompletedOnboarding") }
+    }
+
     private init() {
         let defaults = UserDefaults.standard
 
@@ -57,5 +61,6 @@ final class AppSettings: ObservableObject {
         self.defaultSafeMode = defaults.object(forKey: "app.defaultSafeMode") as? Bool ?? true
         self.defaultAutoReconnect = defaults.object(forKey: "app.defaultAutoReconnect") as? Bool ?? true
         self.defaultTimeout = defaults.object(forKey: "app.defaultTimeout") as? TimeInterval ?? 30
+        self.hasCompletedOnboarding = defaults.bool(forKey: "app.hasCompletedOnboarding")
     }
 }

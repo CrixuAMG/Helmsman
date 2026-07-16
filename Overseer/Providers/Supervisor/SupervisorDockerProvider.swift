@@ -60,7 +60,7 @@ final class SupervisorDockerProvider: ServiceManagerProvider, @unchecked Sendabl
                 let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
                 let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
                 let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-                let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+                let _ = String(data: stderrData, encoding: .utf8) ?? ""
 
                 resumeOnce(.success(stdout))
             }

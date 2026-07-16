@@ -4,6 +4,7 @@ import SwiftData
 @main
 struct OverseerApp: App {
     @StateObject private var settings = AppSettings.shared
+    @State private var showOnboarding = false
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -22,6 +23,19 @@ struct OverseerApp: App {
         WindowGroup {
             ConnectionWindow()
                 .frame(minWidth: 800, minHeight: 560)
+                .preferredColorScheme(settings.theme.colorScheme)
+                .overlay {
+                    if showOnboarding {
+                        OnboardingWindow(settings: settings) {
+                            showOnboarding = false
+                        }
+                    }
+                }
+                .onAppear {
+                    if !settings.hasCompletedOnboarding {
+                        showOnboarding = true
+                    }
+                }
         }
         .modelContainer(sharedModelContainer)
 
@@ -33,6 +47,7 @@ struct OverseerApp: App {
             if let connectionID = connectionID {
                 MainWindowWrapper(connectionID: connectionID)
                     .frame(minWidth: 700, minHeight: 500)
+                    .preferredColorScheme(settings.theme.colorScheme)
             }
         }
         .modelContainer(sharedModelContainer)

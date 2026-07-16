@@ -46,6 +46,21 @@ private struct GeneralSettingsView: View {
                 Toggle("Safe Mode", isOn: $settings.defaultSafeMode)
                 Toggle("Auto Reconnect", isOn: $settings.defaultAutoReconnect)
             }
+
+            Section {
+                Button("Restart Onboarding") {
+                    settings.hasCompletedOnboarding = false
+                    NSApplication.shared.terminate(nil)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                    }
+                }
+                .foregroundStyle(.red)
+            } footer: {
+                Text("The app will quit. Reopen it to see the onboarding flow again.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .padding()
