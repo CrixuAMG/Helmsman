@@ -13,8 +13,11 @@ struct MainWindow: View {
         NavigationSplitView {
             sidebar
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240)
-        } detail: {
+        } content: {
             ServiceListView(viewModel: viewModel)
+                .navigationSplitViewColumnWidth(min: 280, ideal: 320)
+        } detail: {
+            detailPane
         }
         .navigationTitle(connection.name)
         .toolbar {
@@ -32,6 +35,34 @@ struct MainWindow: View {
                 },
                 secondaryButton: .cancel()
             )
+        }
+    }
+
+    @ViewBuilder
+    private var detailPane: some View {
+        if let serviceID = viewModel.selectedServiceID,
+           let service = viewModel.services.first(where: { $0.id == serviceID }) {
+            ServiceDetailView(
+                service: service,
+                onStart: { viewModel.start(service) },
+                onStop: { viewModel.stop(service) },
+                onRestart: { viewModel.restart(service) }
+            )
+        } else {
+            VStack(spacing: 16) {
+                Image(systemName: "sidebar.right")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.secondary)
+
+                Text("No Service Selected")
+                    .font(.title2)
+                    .fontWeight(.medium)
+
+                Text("Select a service from the list to view details.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
