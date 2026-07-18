@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ServiceRowView: View {
     let service: Service
+    let isPerformingAction: Bool
     let onStart: () -> Void
     let onStop: () -> Void
     let onRestart: () -> Void
@@ -28,12 +29,18 @@ struct ServiceRowView: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
-                actionButton("play.fill", action: onStart, disabled: service.status == .running, tint: .green)
-                actionButton("stop.fill", action: onStop, disabled: service.status == .stopped, tint: .red)
-                actionButton("arrow.clockwise", action: onRestart, disabled: false, tint: .blue)
+            if isPerformingAction {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: 94, alignment: .trailing)
+            } else {
+                HStack(spacing: 8) {
+                    actionButton("play.fill", action: onStart, disabled: service.status == .running, tint: .green)
+                    actionButton("stop.fill", action: onStop, disabled: service.status == .stopped, tint: .red)
+                    actionButton("arrow.clockwise", action: onRestart, disabled: false, tint: .blue)
+                }
+                .opacity(isHovered ? 1 : 0.6)
             }
-            .opacity(isHovered ? 1 : 0.6)
 
         }
         .padding(.vertical, 4)

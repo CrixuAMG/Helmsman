@@ -26,6 +26,20 @@ enum AppTheme: String, CaseIterable, Identifiable {
     }
 }
 
+enum MemoryDisplayUnit: String, CaseIterable, Identifiable {
+    case megabytes
+    case gigabytes
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .megabytes: "MB"
+        case .gigabytes: "GB"
+        }
+    }
+}
+
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
@@ -53,6 +67,10 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "app.hasCompletedOnboarding") }
     }
 
+    @Published var memoryDisplayUnit: MemoryDisplayUnit {
+        didSet { UserDefaults.standard.set(memoryDisplayUnit.rawValue, forKey: "app.memoryDisplayUnit") }
+    }
+
     private init() {
         let defaults = UserDefaults.standard
 
@@ -62,5 +80,6 @@ final class AppSettings: ObservableObject {
         self.defaultAutoReconnect = defaults.object(forKey: "app.defaultAutoReconnect") as? Bool ?? true
         self.defaultTimeout = defaults.object(forKey: "app.defaultTimeout") as? TimeInterval ?? 30
         self.hasCompletedOnboarding = defaults.bool(forKey: "app.hasCompletedOnboarding")
+        self.memoryDisplayUnit = MemoryDisplayUnit(rawValue: defaults.string(forKey: "app.memoryDisplayUnit") ?? "") ?? .megabytes
     }
 }

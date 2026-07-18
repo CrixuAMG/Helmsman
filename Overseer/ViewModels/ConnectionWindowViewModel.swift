@@ -52,6 +52,12 @@ final class ConnectionWindowViewModel {
             return
         }
         selectedConnectionID = connection.id
+        isEditing = false
+        populateForm(from: connection)
+    }
+
+    func editConnection(_ connection: Connection) {
+        selectedConnectionID = connection.id
         isEditing = true
         populateForm(from: connection)
     }

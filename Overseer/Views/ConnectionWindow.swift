@@ -4,6 +4,7 @@ import SwiftData
 struct ConnectionWindow: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Connection.name) private var connections: [Connection]
     @State private var viewModel = ConnectionWindowViewModel()
 
@@ -116,13 +117,14 @@ struct ConnectionWindow: View {
 
             HStack(spacing: 12) {
                 Button("Edit") {
-                    viewModel.selectConnection(connection)
+                    viewModel.editConnection(connection)
                 }
                 .buttonStyle(.bordered)
                 .keyboardShortcut("e", modifiers: .command)
 
                 Button("Connect") {
                     openWindow(id: "main-window", value: connection.id)
+                    dismiss()
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)

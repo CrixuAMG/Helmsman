@@ -7,6 +7,8 @@ struct ServiceListView: View {
         VStack(spacing: 0) {
             if viewModel.services.isEmpty && !viewModel.isLoading {
                 emptyState
+            } else if viewModel.filteredServices.isEmpty && !viewModel.searchText.isEmpty {
+                noSearchResults
             } else {
                 serviceList
             }
@@ -20,6 +22,7 @@ struct ServiceListView: View {
             ForEach(viewModel.filteredServices) { service in
                 ServiceRowView(
                     service: service,
+                    isPerformingAction: viewModel.isPerformingAction(for: service),
                     onStart: { viewModel.start(service) },
                     onStop: { viewModel.stop(service) },
                     onRestart: { viewModel.restart(service) }
@@ -27,18 +30,37 @@ struct ServiceListView: View {
                 .tag(service.id)
                 .contextMenu {
                     Button("Start") { viewModel.start(service) }
-                        .disabled(service.status == .running)
+                        .disabled(service.status == .running || viewModel.isPerformingAction(for: service))
 
                     Button("Stop") { viewModel.stop(service) }
-                        .disabled(service.status == .stopped)
+                        .disabled(service.status == .stopped || viewModel.isPerformingAction(for: service))
 
                     Button("Restart") { viewModel.restart(service) }
+                        .disabled(viewModel.isPerformingAction(for: service))
                 }
 
             }
         }
         .listStyle(.inset)
 
+    }
+
+    private var noSearchResults: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 36))
+                .foregroundStyle(.secondary)
+
+            Text("No Matches")
+                .font(.headline)
+
+            Text("No services match \"\(viewModel.searchText)\".")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
 
     private var emptyState: some View {

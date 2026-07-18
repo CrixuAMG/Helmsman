@@ -20,7 +20,7 @@ struct OverseerApp: App {
     }()
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup("Connections", id: "connections") {
             ConnectionWindow()
                 .frame(minWidth: 800, minHeight: 560)
                 .preferredColorScheme(settings.theme.colorScheme)
@@ -51,6 +51,22 @@ struct OverseerApp: App {
             }
         }
         .modelContainer(sharedModelContainer)
+        .commands {
+            OverseerCommands()
+        }
+    }
+}
+
+struct OverseerCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Button("Show Connections") {
+                openWindow(id: "connections")
+            }
+            .keyboardShortcut("0", modifiers: [.command])
+        }
     }
 }
 

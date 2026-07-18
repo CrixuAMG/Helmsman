@@ -3,6 +3,19 @@ import SwiftUI
 struct MainWindow: View {
     let connection: Connection
     @State private var viewModel: MainWindowViewModel
+    @State private var activeAlert: ActiveAlert?
+
+    enum ActiveAlert: Identifiable {
+        case safeMode(SafeModeAlert)
+        case error(ErrorAlert)
+
+        var id: UUID {
+            switch self {
+            case .safeMode(let alert): return alert.id
+            case .error(let alert): return alert.id
+            }
+        }
+    }
 
     init(connection: Connection) {
         self.connection = connection
@@ -31,36 +44,56 @@ struct MainWindow: View {
         .onDisappear {
             viewModel.stopPolling()
         }
-        .alert(item: $viewModel.safeModeAlert) { alert in
-            Alert(
-                title: Text(alert.title),
-                message: Text(alert.message),
-                primaryButton: .destructive(Text("Confirm")) {
-                    Task { await alert.action() }
-                },
-                secondaryButton: .cancel()
-            )
+        .onChange(of: viewModel.safeModeAlert?.id) { _, newID in
+            if let alert = viewModel.safeModeAlert, newID != nil {
+                activeAlert = .safeMode(alert)
+            }
         }
-        .alert(item: $viewModel.errorAlert) { alert in
-            if let onReconnect = alert.onReconnect {
+        .onChange(of: viewModel.errorAlert?.id) { _, newID in
+            if let alert = viewModel.errorAlert, newID != nil {
+                activeAlert = .error(alert)
+            }
+        }
+        .alert(item: $activeAlert) { alert in
+            switch alert {
+            case .safeMode(let safeModeAlert):
+                print("[DEBUG] safeModeAlert displayed: \(safeModeAlert.title) - \(safeModeAlert.message)")
                 return Alert(
-                    title: Text(alert.title),
-                    message: Text(alert.message + (alert.retryCount > 0 ? "\n\nRetry attempt \(alert.retryCount) of 3" : "")),
-                    primaryButton: .default(Text("Retry")) {
-                        Task { await alert.onRetry() }
+                    title: Text(safeModeAlert.title),
+                    message: Text(safeModeAlert.message),
+                    primaryButton: .destructive(Text("Confirm")) {
+                        print("[DEBUG] safeModeAlert Confirm button tapped for: \(safeModeAlert.title)")
+                        viewModel.safeModeAlert = nil
+                        Task { await safeModeAlert.action() }
                     },
-                    secondaryButton: .default(Text("Reconnect")) {
-                        Task { await onReconnect() }
+                    secondaryButton: .cancel {
+                        viewModel.safeModeAlert = nil
                     }
                 )
-            } else {
-                return Alert(
-                    title: Text(alert.title),
-                    message: Text(alert.message),
-                    dismissButton: .default(Text("OK")) {
-                        Task { await alert.onRetry() }
-                    }
-                )
+            case .error(let errorAlert):
+                if let onReconnect = errorAlert.onReconnect {
+                    return Alert(
+                        title: Text(errorAlert.title),
+                        message: Text(errorAlert.message + (errorAlert.retryCount > 0 ? "\n\nRetry attempt \(errorAlert.retryCount) of 3" : "")),
+                        primaryButton: .default(Text("Retry")) {
+                            viewModel.errorAlert = nil
+                            Task { await errorAlert.onRetry() }
+                        },
+                        secondaryButton: .default(Text("Reconnect")) {
+                            viewModel.errorAlert = nil
+                            Task { await onReconnect() }
+                        }
+                    )
+                } else {
+                    return Alert(
+                        title: Text(errorAlert.title),
+                        message: Text(errorAlert.message),
+                        dismissButton: .default(Text("OK")) {
+                            viewModel.errorAlert = nil
+                            Task { await errorAlert.onRetry() }
+                        }
+                    )
+                }
             }
         }
     }
@@ -71,6 +104,9 @@ struct MainWindow: View {
            let service = viewModel.services.first(where: { $0.id == serviceID }) {
             ServiceDetailView(
                 service: service,
+                metricsStore: viewModel.metricsStore,
+                memoryDisplayUnit: AppSettings.shared.memoryDisplayUnit,
+                isPerformingAction: viewModel.isPerformingAction(for: service),
                 onStart: { viewModel.start(service) },
                 onStop: { viewModel.stop(service) },
                 onRestart: { viewModel.restart(service) }
@@ -94,6 +130,21 @@ struct MainWindow: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         }
+    }
+
+    private var runningServiceCount: Int {
+        viewModel.services.filter { $0.status == .running }.count
+    }
+
+    private var attentionServiceCount: Int {
+        viewModel.services.filter { service in
+            switch service.status {
+            case .backingoff, .fatal, .unknown:
+                return true
+            default:
+                return false
+            }
+        }.count
     }
 
     private var sidebar: some View {
@@ -138,7 +189,23 @@ struct MainWindow: View {
                         .font(.system(.body, design: .monospaced))
                         .foregroundStyle(.secondary)
                 }
-                
+
+                HStack {
+                    Text("Running")
+                    Spacer()
+                    Text("\(runningServiceCount)")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(.green)
+                }
+
+                HStack {
+                    Text("Attention")
+                    Spacer()
+                    Text("\(attentionServiceCount)")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(attentionServiceCount > 0 ? .orange : .secondary)
+                }
+
                 if viewModel.pollingEngine.isPolling {
                     HStack {
                         Text("Auto-refresh")

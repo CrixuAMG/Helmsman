@@ -80,6 +80,14 @@ private struct AppearanceSettingsView: View {
                 }
                 .pickerStyle(.segmented)
             }
+
+            Section("Monitoring") {
+                Picker("Memory Display", selection: $settings.memoryDisplayUnit) {
+                    ForEach(MemoryDisplayUnit.allCases) { unit in
+                        Text(unit.displayName).tag(unit)
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         .padding()

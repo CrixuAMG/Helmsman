@@ -11,6 +11,10 @@ struct Service: Identifiable, Sendable, Equatable {
     var exitStatus: Int?
     var lastUpdated: Date
 
+    var controlName: String {
+        group == name ? name : "\(group):\(name)"
+    }
+
     init(
         name: String,
         group: String,
