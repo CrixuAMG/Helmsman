@@ -59,13 +59,10 @@ final class ServiceManager {
 
     func start(_ service: Service) async throws {
         let controlName = service.controlName
-        print("[DEBUG] ServiceManager.start() controlName: \(controlName), hasProvider: \(resolvedProvider != nil)")
         guard let provider = resolvedProvider else { throw ServiceError.providerUnavailable }
         do {
             try await provider.startProcess(controlName)
-            print("[DEBUG] ServiceManager.start() provider.startProcess SUCCESS")
         } catch {
-            print("[DEBUG] ServiceManager.start() provider.startProcess FAILED: \(error.localizedDescription), shouldReconnect: \(shouldReconnect(error: error))")
             if shouldReconnect(error: error) {
                 resolvedProvider = nil
                 let newProvider = try await resolveProvider()
@@ -78,13 +75,10 @@ final class ServiceManager {
 
     func stop(_ service: Service) async throws {
         let controlName = service.controlName
-        print("[DEBUG] ServiceManager.stop() controlName: \(controlName), hasProvider: \(resolvedProvider != nil)")
         guard let provider = resolvedProvider else { throw ServiceError.providerUnavailable }
         do {
             try await provider.stopProcess(controlName)
-            print("[DEBUG] ServiceManager.stop() provider.stopProcess SUCCESS")
         } catch {
-            print("[DEBUG] ServiceManager.stop() provider.stopProcess FAILED: \(error.localizedDescription), shouldReconnect: \(shouldReconnect(error: error))")
             if shouldReconnect(error: error) {
                 resolvedProvider = nil
                 let newProvider = try await resolveProvider()
@@ -97,13 +91,10 @@ final class ServiceManager {
 
     func restart(_ service: Service) async throws {
         let controlName = service.controlName
-        print("[DEBUG] ServiceManager.restart() controlName: \(controlName), hasProvider: \(resolvedProvider != nil)")
         guard let provider = resolvedProvider else { throw ServiceError.providerUnavailable }
         do {
             try await provider.restartProcess(controlName)
-            print("[DEBUG] ServiceManager.restart() provider.restartProcess SUCCESS")
         } catch {
-            print("[DEBUG] ServiceManager.restart() provider.restartProcess FAILED: \(error.localizedDescription), shouldReconnect: \(shouldReconnect(error: error))")
             if shouldReconnect(error: error) {
                 resolvedProvider = nil
                 let newProvider = try await resolveProvider()
@@ -115,11 +106,8 @@ final class ServiceManager {
     }
 
     func getProcessMetrics(pid: Int) async throws -> ProcessMetrics {
-        print("[DEBUG] ServiceManager.getProcessMetrics() pid: \(pid), hasProvider: \(resolvedProvider != nil)")
         guard let provider = resolvedProvider else { throw ServiceError.providerUnavailable }
-        let metrics = try await provider.getProcessMetrics(pid: pid)
-        print("[DEBUG] ServiceManager.getProcessMetrics() SUCCESS - CPU: \(String(format: "%.1f", metrics.cpuPercent))%, Memory: \(String(format: "%.1f", metrics.memoryMB)) MB")
-        return metrics
+        return try await provider.getProcessMetrics(pid: pid)
     }
 
     func reconnect() async {

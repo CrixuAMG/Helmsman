@@ -57,12 +57,10 @@ struct MainWindow: View {
         .alert(item: $activeAlert) { alert in
             switch alert {
             case .safeMode(let safeModeAlert):
-                print("[DEBUG] safeModeAlert displayed: \(safeModeAlert.title) - \(safeModeAlert.message)")
                 return Alert(
                     title: Text(safeModeAlert.title),
                     message: Text(safeModeAlert.message),
                     primaryButton: .destructive(Text("Confirm")) {
-                        print("[DEBUG] safeModeAlert Confirm button tapped for: \(safeModeAlert.title)")
                         viewModel.safeModeAlert = nil
                         Task { await safeModeAlert.action() }
                     },

@@ -94,85 +94,61 @@ final class MainWindowViewModel {
     }
 
     func start(_ service: Service) {
-        print("[DEBUG] start() called for service: \(service.name), status: \(service.status), isPerformingAction: \(isPerformingAction(for: service)), safeMode: \(connection.safeMode)")
-        guard !isPerformingAction(for: service) else {
-            print("[DEBUG] start() BLOCKED - already performing action for \(service.name)")
-            return
-        }
+        guard !isPerformingAction(for: service) else { return }
 
         if connection.safeMode {
-            print("[DEBUG] start() showing safeModeAlert for \(service.name)")
             safeModeAlert = SafeModeAlert(
                 title: "Start Service",
                 message: "Are you sure you want to start '\(service.name)'?",
                 action: { [weak self] in
-                    print("[DEBUG] safeModeAlert action triggered for start of \(service.name)")
                     await self?.performStart(service)
                 }
             )
         } else {
-            print("[DEBUG] start() directly calling performStart for \(service.name)")
             Task { await performStart(service) }
         }
     }
 
     func stop(_ service: Service) {
-        print("[DEBUG] stop() called for service: \(service.name), status: \(service.status), isPerformingAction: \(isPerformingAction(for: service)), safeMode: \(connection.safeMode)")
-        guard !isPerformingAction(for: service) else {
-            print("[DEBUG] stop() BLOCKED - already performing action for \(service.name)")
-            return
-        }
+        guard !isPerformingAction(for: service) else { return }
 
         if connection.safeMode {
-            print("[DEBUG] stop() showing safeModeAlert for \(service.name)")
             safeModeAlert = SafeModeAlert(
                 title: "Stop Service",
                 message: "Are you sure you want to stop '\(service.name)'?",
                 action: { [weak self] in
-                    print("[DEBUG] safeModeAlert action triggered for stop of \(service.name)")
                     await self?.performStop(service)
                 }
             )
         } else {
-            print("[DEBUG] stop() directly calling performStop for \(service.name)")
             Task { await performStop(service) }
         }
     }
 
     func restart(_ service: Service) {
-        print("[DEBUG] restart() called for service: \(service.name), status: \(service.status), isPerformingAction: \(isPerformingAction(for: service)), safeMode: \(connection.safeMode)")
-        guard !isPerformingAction(for: service) else {
-            print("[DEBUG] restart() BLOCKED - already performing action for \(service.name)")
-            return
-        }
+        guard !isPerformingAction(for: service) else { return }
 
         if connection.safeMode {
-            print("[DEBUG] restart() showing safeModeAlert for \(service.name)")
             safeModeAlert = SafeModeAlert(
                 title: "Restart Service",
                 message: "Are you sure you want to restart '\(service.name)'?",
                 action: { [weak self] in
-                    print("[DEBUG] safeModeAlert action triggered for restart of \(service.name)")
                     await self?.performRestart(service)
                 }
             )
         } else {
-            print("[DEBUG] restart() directly calling performRestart for \(service.name)")
             Task { await performRestart(service) }
         }
     }
 
     private func performStart(_ service: Service) async {
-        print("[DEBUG] performStart() START for \(service.name), controlName: \(service.controlName)")
         activeActionServiceIDs.insert(service.id)
         defer { activeActionServiceIDs.remove(service.id) }
 
         do {
             try await serviceManager.start(service)
-            print("[DEBUG] performStart() SUCCESS for \(service.name), refreshing...")
             await refresh()
         } catch {
-            print("[DEBUG] performStart() FAILED for \(service.name): \(error.localizedDescription)")
             errorAlert = ErrorAlert(
                 title: "Action Failed",
                 message: "Failed to start '\(service.name)': \(error.localizedDescription)",
@@ -186,16 +162,13 @@ final class MainWindowViewModel {
     }
 
     private func performStop(_ service: Service) async {
-        print("[DEBUG] performStop() START for \(service.name), controlName: \(service.controlName)")
         activeActionServiceIDs.insert(service.id)
         defer { activeActionServiceIDs.remove(service.id) }
 
         do {
             try await serviceManager.stop(service)
-            print("[DEBUG] performStop() SUCCESS for \(service.name), refreshing...")
             await refresh()
         } catch {
-            print("[DEBUG] performStop() FAILED for \(service.name): \(error.localizedDescription)")
             errorAlert = ErrorAlert(
                 title: "Action Failed",
                 message: "Failed to stop '\(service.name)': \(error.localizedDescription)",
@@ -209,16 +182,13 @@ final class MainWindowViewModel {
     }
 
     private func performRestart(_ service: Service) async {
-        print("[DEBUG] performRestart() START for \(service.name), controlName: \(service.controlName)")
         activeActionServiceIDs.insert(service.id)
         defer { activeActionServiceIDs.remove(service.id) }
 
         do {
             try await serviceManager.restart(service)
-            print("[DEBUG] performRestart() SUCCESS for \(service.name), refreshing...")
             await refresh()
         } catch {
-            print("[DEBUG] performRestart() FAILED for \(service.name): \(error.localizedDescription)")
             errorAlert = ErrorAlert(
                 title: "Action Failed",
                 message: "Failed to restart '\(service.name)': \(error.localizedDescription)",

@@ -117,17 +117,14 @@ struct ServiceDetailView: View {
                     let cpuStr = String(format: "%.1f%%", latest.cpuPercent)
                     let memStr = formatMemory(latest.memoryMB)
                     detailRow("CPU", value: cpuStr)
-                        .onAppear { print("[DEBUG] ServiceDetailView.detailsSection: service \(service.name), CPU: \(cpuStr), Memory: \(memStr)") }
                     Divider().padding(.leading, 120)
                     detailRow("Memory", value: memStr)
                 } else if service.status == .running && service.pid > 0 {
                     detailRow("CPU", value: "Collecting...")
-                        .onAppear { print("[DEBUG] ServiceDetailView.detailsSection: service \(service.name) - collecting metrics...") }
                     Divider().padding(.leading, 120)
                     detailRow("Memory", value: "Collecting...")
                 } else {
                     detailRow("CPU", value: "—")
-                        .onAppear { print("[DEBUG] ServiceDetailView.detailsSection: service \(service.name) - not running, showing dash") }
                     Divider().padding(.leading, 120)
                     detailRow("Memory", value: "—")
                 }
@@ -156,14 +153,11 @@ struct ServiceDetailView: View {
             if history.isEmpty {
                 if service.status == .running && service.pid > 0 {
                     emptyGraphPlaceholder
-                        .onAppear { print("[DEBUG] ServiceDetailView.metricsGraphSection: service \(service.name), history count: 0 (empty, showing placeholder)") }
                 } else {
                     notRunningPlaceholder
-                        .onAppear { print("[DEBUG] ServiceDetailView.metricsGraphSection: service \(service.name), not running") }
                 }
             } else {
                 cpuGraph(history: history)
-                    .onAppear { print("[DEBUG] ServiceDetailView.metricsGraphSection: service \(service.name), history count: \(history.count)") }
                 memoryGraph(history: history)
             }
         }

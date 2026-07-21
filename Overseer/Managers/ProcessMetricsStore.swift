@@ -18,8 +18,6 @@ final class ProcessMetricsStore {
         for item in collectedMetrics {
             history[item.serviceID, default: []].append(item.metrics)
             trimHistory(for: item.serviceID, cutoff: cutoff)
-            let count = history[item.serviceID]?.count ?? 0
-            print("[DEBUG] ProcessMetricsStore: added metrics for serviceID \(item.serviceID), history count: \(count)")
         }
     }
 

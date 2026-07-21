@@ -36,23 +36,17 @@ final class SupervisorSSHProvider: ServiceManagerProvider, @unchecked Sendable {
     }
 
     nonisolated func startProcess(_ name: String) async throws {
-        print("[DEBUG] SSHProvider.startProcess() name: \(name), host: \(host)")
         let (stdout, exitCode) = try await executeRemotely("start \(Self.shellEscape(name))")
-        print("[DEBUG] SSHProvider.startProcess() exitCode: \(exitCode), output: \(stdout)")
         guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
     }
 
     nonisolated func stopProcess(_ name: String) async throws {
-        print("[DEBUG] SSHProvider.stopProcess() name: \(name), host: \(host)")
         let (stdout, exitCode) = try await executeRemotely("stop \(Self.shellEscape(name))")
-        print("[DEBUG] SSHProvider.stopProcess() exitCode: \(exitCode), output: \(stdout)")
         guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
     }
 
     nonisolated func restartProcess(_ name: String) async throws {
-        print("[DEBUG] SSHProvider.restartProcess() name: \(name), host: \(host)")
         let (stdout, exitCode) = try await executeRemotely("restart \(Self.shellEscape(name))")
-        print("[DEBUG] SSHProvider.restartProcess() exitCode: \(exitCode), output: \(stdout)")
         guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
     }
 
@@ -82,8 +76,6 @@ final class SupervisorSSHProvider: ServiceManagerProvider, @unchecked Sendable {
         let remoteCommand = "\(supervisorctlPath) \(command)"
         var sshArgs = buildSSHArguments()
         sshArgs.append(remoteCommand)
-
-        print("[DEBUG] SSHProvider.executeRemotely: ssh \(sshArgs.joined(separator: " "))")
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")

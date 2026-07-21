@@ -24,30 +24,22 @@ final class SupervisorXMLRPCProvider: ServiceManagerProvider, @unchecked Sendabl
     }
 
     nonisolated func startProcess(_ name: String) async throws {
-        print("[DEBUG] XMLRPCProvider.startProcess() name: \(name), endpoint: \(endpoint)")
         _ = try await callMethod("supervisor.startProcess", params: [.string(name), .bool(true)])
-        print("[DEBUG] XMLRPCProvider.startProcess() SUCCESS")
     }
 
     nonisolated func stopProcess(_ name: String) async throws {
-        print("[DEBUG] XMLRPCProvider.stopProcess() name: \(name), endpoint: \(endpoint)")
         _ = try await callMethod("supervisor.stopProcess", params: [.string(name), .bool(true)])
-        print("[DEBUG] XMLRPCProvider.stopProcess() SUCCESS")
     }
 
     nonisolated func restartProcess(_ name: String) async throws {
-        print("[DEBUG] XMLRPCProvider.restartProcess() name: \(name), endpoint: \(endpoint)")
         try await stopProcess(name)
         try await startProcess(name)
-        print("[DEBUG] XMLRPCProvider.restartProcess() SUCCESS")
     }
 
     // MARK: - XML-RPC Call
 
     private nonisolated func callMethod(_ method: String, params: [XMLRPCValue]) async throws -> XMLRPCValue {
         let requestXML = buildRequest(method: method, params: params)
-
-        print("[DEBUG] XMLRPCProvider.callMethod: \(method), endpoint: \(endpoint)")
 
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"

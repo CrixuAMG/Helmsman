@@ -30,31 +30,22 @@ final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable
     }
 
     nonisolated func startProcess(_ name: String) async throws {
-        print("[DEBUG] LocalProvider.startProcess() name: \(name)")
         let (stdout, exitCode) = try await executeCommand(["start", name])
-        print("[DEBUG] LocalProvider.startProcess() exitCode: \(exitCode), output: \(stdout)")
         guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
     }
 
     nonisolated func stopProcess(_ name: String) async throws {
-        print("[DEBUG] LocalProvider.stopProcess() name: \(name)")
         let (stdout, exitCode) = try await executeCommand(["stop", name])
-        print("[DEBUG] LocalProvider.stopProcess() exitCode: \(exitCode), output: \(stdout)")
         guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
     }
 
     nonisolated func restartProcess(_ name: String) async throws {
-        print("[DEBUG] LocalProvider.restartProcess() name: \(name)")
         let (stdout, exitCode) = try await executeCommand(["restart", name])
-        print("[DEBUG] LocalProvider.restartProcess() exitCode: \(exitCode), output: \(stdout)")
         guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
     }
 
     nonisolated func getProcessMetrics(pid: Int) async throws -> ProcessMetrics {
-        print("[DEBUG] LocalProvider.getProcessMetrics() pid: \(pid)")
-        let metrics = try await metricsSampler.sample(pid: pid)
-        print("[DEBUG] LocalProvider.getProcessMetrics() result - CPU: \(String(format: "%.1f", metrics.cpuPercent))%, Memory: \(String(format: "%.1f", metrics.memoryMB)) MB")
-        return metrics
+        try await metricsSampler.sample(pid: pid)
     }
 
     private nonisolated func executeCommand(_ commandArguments: [String]) async throws -> (stdout: String, exitCode: Int32) {
@@ -76,8 +67,6 @@ final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable
         }
         args.append(contentsOf: commandArguments)
         process.arguments = args
-
-        print("[DEBUG] LocalProvider.executeCommand: \(resolvedPath) \(args.joined(separator: " "))")
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()

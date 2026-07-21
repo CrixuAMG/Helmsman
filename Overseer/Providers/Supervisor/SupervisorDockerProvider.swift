@@ -17,23 +17,17 @@ final class SupervisorDockerProvider: ServiceManagerProvider, @unchecked Sendabl
     }
 
     nonisolated func startProcess(_ name: String) async throws {
-        print("[DEBUG] DockerProvider.startProcess() name: \(name), container: \(container)")
         let (stdout, exitCode) = try await executeCommand(["start", name])
-        print("[DEBUG] DockerProvider.startProcess() exitCode: \(exitCode), output: \(stdout)")
         guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
     }
 
     nonisolated func stopProcess(_ name: String) async throws {
-        print("[DEBUG] DockerProvider.stopProcess() name: \(name), container: \(container)")
         let (stdout, exitCode) = try await executeCommand(["stop", name])
-        print("[DEBUG] DockerProvider.stopProcess() exitCode: \(exitCode), output: \(stdout)")
         guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
     }
 
     nonisolated func restartProcess(_ name: String) async throws {
-        print("[DEBUG] DockerProvider.restartProcess() name: \(name), container: \(container)")
         let (stdout, exitCode) = try await executeCommand(["restart", name])
-        print("[DEBUG] DockerProvider.restartProcess() exitCode: \(exitCode), output: \(stdout)")
         guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
     }
 
@@ -111,8 +105,6 @@ final class SupervisorDockerProvider: ServiceManagerProvider, @unchecked Sendabl
         let process = Process()
         process.executableURL = URL(fileURLWithPath: dockerPath)
         process.arguments = ["exec", container, supervisorctlPath] + commandArguments
-
-        print("[DEBUG] DockerProvider.executeCommand: \(dockerPath) exec \(container) \(supervisorctlPath) \(commandArguments.joined(separator: " "))")
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
