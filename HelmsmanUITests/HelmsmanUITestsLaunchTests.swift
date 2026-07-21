@@ -1,13 +1,13 @@
 //
-//  SupervisionUITestsLaunchTests.swift
-//  SupervisionUITests
+//  HelmsmanUITestsLaunchTests.swift
+//  HelmsmanUITests
 //
 //  Created by Christian Job Kaal on 16/07/2026.
 //
 
 import XCTest
 
-final class SupervisionUITestsLaunchTests: XCTestCase {
+final class HelmsmanUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

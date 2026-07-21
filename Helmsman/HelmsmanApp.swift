@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct SupervisionApp: App {
+struct HelmsmanApp: App {
     @StateObject private var settings = AppSettings.shared
     @State private var showOnboarding = false
 
@@ -52,12 +52,12 @@ struct SupervisionApp: App {
         }
         .modelContainer(sharedModelContainer)
         .commands {
-            SupervisionCommands()
+            HelmsmanCommands()
         }
     }
 }
 
-struct SupervisionCommands: Commands {
+struct HelmsmanCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {

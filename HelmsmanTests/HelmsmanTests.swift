@@ -1,14 +1,14 @@
 //
-//  SupervisionTests.swift
-//  SupervisionTests
+//  HelmsmanTests.swift
+//  HelmsmanTests
 //
 //  Created by Christian Job Kaal on 16/07/2026.
 //
 
 import Testing
-@testable import Supervision
+@testable import Helmsman
 
-struct SupervisionTests {
+struct HelmsmanTests {
 
     @Test func testSupervisorLocalProvider() async throws {
         let provider = SupervisorLocalProvider(

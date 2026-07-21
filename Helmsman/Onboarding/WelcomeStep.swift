@@ -10,7 +10,7 @@ struct WelcomeStep: View {
                 .foregroundStyle(.tint)
                 .padding(.top, 20)
 
-            Text("Welcome to Supervision")
+            Text("Welcome to Helmsman")
                 .font(.title2)
                 .fontWeight(.medium)
 
