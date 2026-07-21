@@ -1,14 +1,14 @@
 //
-//  OverseerTests.swift
-//  OverseerTests
+//  SupervisionTests.swift
+//  SupervisionTests
 //
 //  Created by Christian Job Kaal on 16/07/2026.
 //
 
 import Testing
-@testable import Overseer
+@testable import Supervision
 
-struct OverseerTests {
+struct SupervisionTests {
 
     @Test func testSupervisorLocalProvider() async throws {
         let provider = SupervisorLocalProvider(

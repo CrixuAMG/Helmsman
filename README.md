@@ -1,4 +1,4 @@
-# Overseer
+# Supervision
 
 A native macOS GUI for managing [Supervisor](http://supervisord.org) processes. Built with SwiftUI and Swift Concurrency.
 
@@ -26,15 +26,15 @@ A native macOS GUI for managing [Supervisor](http://supervisord.org) processes. 
 ## Building
 
 ```bash
-git clone https://github.com/your-username/Overseer.git
-cd Overseer
-open Overseer.xcodeproj
+git clone https://github.com/your-username/Supervision.git
+cd Supervision
+open Supervision.xcodeproj
 # Build and run (Cmd+R)
 ```
 
 ## Usage
 
-1. Launch Overseer
+1. Launch Supervision
 2. Click **+** to create a new connection
 3. Choose your connection method:
    - **Local**: Runs `supervisorctl` directly on your Mac
@@ -58,7 +58,7 @@ open Overseer.xcodeproj
 ## Architecture
 
 ```
-Overseer/
+Supervision/
 ├── Models/              # Data models (Connection, Service, ProviderConfiguration)
 ├── Protocols/           # ServiceManagerProvider protocol
 ├── Managers/            # ConnectionManager, ServiceManager, PollingEngine

@@ -1,13 +1,13 @@
 //
-//  OverseerUITestsLaunchTests.swift
-//  OverseerUITests
+//  SupervisionUITestsLaunchTests.swift
+//  SupervisionUITests
 //
 //  Created by Christian Job Kaal on 16/07/2026.
 //
 
 import XCTest
 
-final class OverseerUITestsLaunchTests: XCTestCase {
+final class SupervisionUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

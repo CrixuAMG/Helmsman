@@ -1,13 +1,13 @@
 //
-//  OverseerUITests.swift
-//  OverseerUITests
+//  SupervisionUITests.swift
+//  SupervisionUITests
 //
 //  Created by Christian Job Kaal on 16/07/2026.
 //
 
 import XCTest
 
-final class OverseerUITests: XCTestCase {
+final class SupervisionUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
