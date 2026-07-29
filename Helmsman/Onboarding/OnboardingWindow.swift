@@ -4,7 +4,6 @@ struct OnboardingWindow: View {
     @State private var state: OnboardingState
     @ObservedObject private var settings: AppSettings
     @State private var showSkipConfirmation = false
-    @Environment(\.dismiss) private var dismiss
 
     private let onDismiss: () -> Void
 
@@ -21,30 +20,34 @@ struct OnboardingWindow: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            progressBar
+        HStack(spacing: 0) {
+            sidebar
 
-            ZStack {
-                Color(nsColor: .windowBackgroundColor).ignoresSafeArea()
+            Divider()
 
-                switch state.steps[state.currentStepIndex].id {
-                case "welcome":
-                    WelcomeStep(state: state)
-                case "local-setup":
-                    LocalSetupStep(state: state)
-                case "first-connection":
-                    FirstConnectionStep(state: state)
-                case "appearance":
-                    AppearanceStep(state: state, settings: settings)
-                default:
-                    EmptyView()
+            VStack(spacing: 0) {
+                ScrollView {
+                    currentStepView
+                        .id(state.currentStep.id)
+                        .transition(.opacity)
+                        .animation(.easeInOut(duration: 0.18), value: state.currentStep.id)
                 }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            navigationBar
+                Divider()
+
+                navigationBar
+            }
+            .background(Color(nsColor: .windowBackgroundColor))
         }
-        .frame(width: 600, height: 500)
+        .frame(width: 720, height: 520)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(.quaternary, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.18), radius: 28, y: 18)
         .alert("Skip Onboarding?", isPresented: $showSkipConfirmation) {
             Button("Skip All") {
                 for step in state.steps {
@@ -54,7 +57,7 @@ struct OnboardingWindow: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("You can always access setup options from Preferences later.")
+            Text("You can always access setup options from Settings later.")
         }
         .onChange(of: state.isDismissed) { _, dismissed in
             if dismissed {
@@ -63,48 +66,69 @@ struct OnboardingWindow: View {
         }
     }
 
-    private var progressBar: some View {
-        VStack(spacing: 4) {
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(.quaternary)
-                        .frame(height: 4)
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Helmsman")
+                    .font(.title3)
+                    .fontWeight(.semibold)
 
-                    Capsule()
-                        .fill(.tint)
-                        .frame(width: geometry.size.width * state.progress, height: 4)
-                        .animation(.easeInOut(duration: 0.3), value: state.progress)
+                Text("Setup Assistant")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 28)
+            .padding(.horizontal, 22)
+
+            VStack(spacing: 4) {
+                ForEach(Array(state.steps.enumerated()), id: \.element.id) { index, step in
+                    stepRow(step, index: index)
                 }
             }
-            .frame(height: 4)
-            .padding(.horizontal, 32)
-            .padding(.top, 20)
+            .padding(.horizontal, 12)
 
-            HStack {
-                ForEach(state.steps) { step in
-                    HStack(spacing: 6) {
-                        stepIcon(step)
-                        Text(step.title)
-                            .font(.caption)
-                            .foregroundStyle(step == state.currentStep ? .primary : .secondary)
-                    }
-                    .frame(maxWidth: .infinity)
+            Spacer()
 
-                    if step.id != state.steps.last?.id {
-                        Image(systemName: "chevron.forward")
-                            .font(.caption2)
-                            .foregroundStyle(.quaternary)
-                    }
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
+            ProgressView(value: state.progress)
+                .controlSize(.small)
+                .padding(.horizontal, 22)
+
+            Text("Step \(state.currentStepIndex + 1) of \(state.steps.count)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 22)
+                .padding(.bottom, 20)
         }
-        .background(.regularMaterial)
+        .frame(width: 190)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .background(.thinMaterial)
     }
 
-    private func stepIcon(_ step: OnboardingStep) -> some View {
+    private func stepRow(_ step: OnboardingStep, index: Int) -> some View {
+        let isCurrent = step == state.currentStep
+
+        return HStack(spacing: 10) {
+            stepIcon(step, index: index)
+                .frame(width: 22, height: 22)
+
+            Text(step.title)
+                .font(.callout)
+                .fontWeight(isCurrent ? .medium : .regular)
+                .foregroundStyle(isCurrent ? .primary : .secondary)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background {
+            if isCurrent {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.14))
+            }
+        }
+    }
+
+    private func stepIcon(_ step: OnboardingStep, index: Int) -> some View {
         Group {
             if step.isCompleted {
                 Image(systemName: "checkmark.circle.fill")
@@ -113,18 +137,39 @@ struct OnboardingWindow: View {
                 Image(systemName: "minus.circle.fill")
                     .foregroundStyle(.secondary)
             } else if step == state.currentStep {
-                Image(systemName: "circle.fill")
+                Image(systemName: stepSymbol(for: step))
                     .foregroundStyle(.tint)
             } else {
-                Image(systemName: "circle")
-                    .foregroundStyle(.tertiary)
+                Text("\(index + 1)")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 18, height: 18)
+                    .background(.quaternary, in: Circle())
             }
         }
-        .font(.caption)
+        .font(.callout)
+        .symbolRenderingMode(.hierarchical)
+    }
+
+    @ViewBuilder
+    private var currentStepView: some View {
+        switch state.currentStep.id {
+        case "welcome":
+            WelcomeStep(state: state)
+        case "local-setup":
+            LocalSetupStep(state: state)
+        case "first-connection":
+            FirstConnectionStep(state: state)
+        case "appearance":
+            AppearanceStep(state: state, settings: settings)
+        default:
+            EmptyView()
+        }
     }
 
     private var navigationBar: some View {
-        HStack {
+        HStack(spacing: 10) {
             Button("Skip Step") {
                 state.skipCurrent()
             }
@@ -132,38 +177,42 @@ struct OnboardingWindow: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
-                if state.currentStepIndex > 0 {
-                    Button("Back") {
-                        state.back()
-                    }
-                }
-
-                Button("Skip All") {
-                    showSkipConfirmation = true
-                }
-                .help("Skip all onboarding steps")
-
-                if state.isLastStep {
-                    Button("Get Started") {
-                        state.completeCurrent()
-                        completeOnboarding()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.return)
-                } else {
-                    Button("Continue") {
-                        state.completeCurrent()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.return)
-                    .disabled(!state.currentStep.isValid && !state.currentStep.isSkipped)
+            if state.currentStepIndex > 0 {
+                Button("Back") {
+                    state.back()
                 }
             }
+
+            Button("Skip All") {
+                showSkipConfirmation = true
+            }
+            .help("Skip all onboarding steps")
+
+            Button(state.isLastStep ? "Get Started" : "Continue") {
+                if state.isLastStep {
+                    state.completeCurrent()
+                    completeOnboarding()
+                } else {
+                    state.completeCurrent()
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .keyboardShortcut(.return)
+            .disabled(!state.currentStep.isValid && !state.currentStep.isSkipped)
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 16)
-        .background(.regularMaterial)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background(.bar)
+    }
+
+    private func stepSymbol(for step: OnboardingStep) -> String {
+        switch step.id {
+        case "welcome": "eye.fill"
+        case "local-setup": "terminal.fill"
+        case "first-connection": "server.rack"
+        case "appearance": "paintbrush.fill"
+        default: "circle.fill"
+        }
     }
 
     private func completeOnboarding() {

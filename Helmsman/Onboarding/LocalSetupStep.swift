@@ -11,42 +11,17 @@ struct LocalSetupStep: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
-            HStack {
-                Spacer()
-                Image(systemName: "questionmark.circle")
-                    .foregroundStyle(.secondary)
-                    .onTapGesture { state.skipCurrent() }
-                Spacer()
-            }
-
-            Image(systemName: "terminal.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(.tint)
-
-            Text("Find Supervisor")
-                .font(.title2)
-                .fontWeight(.medium)
-
-            Text("Locate your supervisorctl binary to manage local services.")
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
+        OnboardingStepPage(
+            systemImage: "terminal.fill",
+            title: "Find Supervisor",
+            subtitle: "Helmsman looks for supervisorctl so it can manage services running on this Mac."
+        ) {
             statusView
 
-            if status == .waiting {
-                if showPathInput {
-                    customPathEntry
-                } else {
-                    Button("Search Again") {
-                        Task { await searchForSupervisor() }
-                    }
-                }
+            if showPathInput {
+                customPathEntry
             }
-
-            Spacer()
         }
-        .padding(32)
         .task {
             await searchForSupervisor()
         }
@@ -55,76 +30,93 @@ struct LocalSetupStep: View {
     @ViewBuilder
     private var statusView: some View {
         switch status {
-        case .waiting:
-            ProgressView()
-                .controlSize(.regular)
-        case .checking:
-            ProgressView()
-                .controlSize(.regular)
+        case .waiting, .checking:
+            OnboardingCard {
+                HStack(spacing: 12) {
+                    ProgressView()
+                        .controlSize(.small)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Searching common install locations")
+                            .fontWeight(.medium)
+                        Text("Checking Homebrew and system paths for supervisorctl.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(14)
+            }
         case .success(let path):
-            Label {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("supervisorctl found")
-                        .fontWeight(.medium)
-                    Text(path)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-            } icon: {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+            OnboardingCard {
+                OnboardingListRow(
+                    systemImage: "checkmark.circle.fill",
+                    title: "supervisorctl found",
+                    description: path,
+                    accessorySystemImage: "checkmark",
+                    accessoryColor: .green
+                )
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.green.opacity(0.1))
-            )
         case .notFound(let message):
-            VStack(alignment: .leading, spacing: 8) {
-                Label {
-                    Text("supervisorctl not found")
-                        .fontWeight(.medium)
-                } icon: {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.yellow)
-                }
+            OnboardingCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("supervisorctl not found")
+                                .fontWeight(.medium)
+                            Text(message)
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.title3)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.orange)
+                    }
 
-                Text(message)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    HStack {
+                        Button("Search Again") {
+                            Task { await searchForSupervisor() }
+                        }
 
-                Button("Enter Path Manually") {
-                    showPathInput = true
+                        Button("Enter Path Manually") {
+                            showPathInput = true
+                        }
+                    }
                 }
+                .padding(14)
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.yellow.opacity(0.1))
-            )
         }
     }
 
     private var customPathEntry: some View {
-        VStack(spacing: 8) {
-            HStack {
-                TextField("Path to supervisorctl", text: $supervisorPath)
-                    .textFieldStyle(.roundedBorder)
-                Button("Verify") {
-                    Task { await verifyCustomPath() }
-                }
-            }
+        OnboardingCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Custom Path")
+                    .fontWeight(.medium)
 
-            Text("Try: /usr/local/bin/supervisorctl, /opt/homebrew/bin/supervisorctl, /usr/bin/supervisorctl")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    TextField("Path to supervisorctl", text: $supervisorPath)
+                        .textFieldStyle(.roundedBorder)
+
+                    Button("Verify") {
+                        Task { await verifyCustomPath() }
+                    }
+                    .disabled(supervisorPath.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+
+                Text("Common paths include /usr/local/bin/supervisorctl and /opt/homebrew/bin/supervisorctl.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(14)
         }
     }
 
     private func searchForSupervisor() async {
         status = .checking
+        showPathInput = false
 
         let searchPaths = ["/opt/homebrew/bin/supervisorctl", "/usr/local/bin/supervisorctl", "/usr/bin/supervisorctl"]
 
@@ -152,12 +144,14 @@ struct LocalSetupStep: View {
         guard FileManager.default.isExecutableFile(atPath: path) else {
             await MainActor.run {
                 status = .notFound("File not found or not executable: \(path)")
+                showPathInput = true
             }
             return
         }
 
         await MainActor.run {
             status = .success(path)
+            showPathInput = false
             state.currentStep.isCompleted = true
         }
     }
