@@ -112,6 +112,7 @@
 			);
 			name = Helmsman;
 			packageProductDependencies = (
+				CB1BCDB63009449C00D7B8F5 /* NIOSSH */,
 			);
 			productName = Helmsman;
 			productReference = CB1BCD8B3009449A00D7B8F3 /* Helmsman.app */;
@@ -196,6 +197,9 @@
 			mainGroup = CB1BCD823009449A00D7B8F3;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			packageReferences = (
+				CB1BCDB53009449C00D7B8F4 /* XCRemoteSwiftPackageReference "swift-nio-ssh" */,
+			);
 			productRefGroup = CB1BCD8C3009449A00D7B8F3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -254,6 +258,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CB1BCDB53009449C00D7B8F4 /* XCRemoteSwiftPackageReference "swift-nio-ssh" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-nio-ssh.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.8.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CB1BCDB63009449C00D7B8F5 /* NIOSSH */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CB1BCDB53009449C00D7B8F4 /* XCRemoteSwiftPackageReference "swift-nio-ssh" */;
+			productName = NIOSSH;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXTargetDependency section */
 		CB1BCD9C3009449C00D7B8F3 /* PBXTargetDependency */ = {
@@ -394,14 +417,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Helmsman/Helmsman.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 9CL96852W7;
-				ENABLE_APP_SANDBOX = NO;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Helmsman;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
@@ -428,14 +451,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Helmsman/Helmsman.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 9CL96852W7;
-				ENABLE_APP_SANDBOX = NO;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Helmsman;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";

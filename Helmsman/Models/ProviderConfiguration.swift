@@ -10,6 +10,7 @@ struct ProviderConfiguration: Sendable {
     let supervisorctlPath: String
     let supervisorConfigPath: String?
     let xmlrpcEndpoint: String?
+    let localEndpoint: String?
     let dockerContainer: String?
     let timeout: TimeInterval
 }

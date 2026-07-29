@@ -15,6 +15,7 @@ final class Connection {
     var supervisorctlPath: String
     var supervisorConfigPath: String?
     var xmlrpcEndpoint: String?
+    var localEndpoint: String?
     var dockerContainer: String?
     var connectionMethodRaw: String
     var pollingInterval: TimeInterval
@@ -51,6 +52,7 @@ final class Connection {
         supervisorctlPath: String = "/usr/bin/supervisorctl",
         supervisorConfigPath: String? = nil,
         xmlrpcEndpoint: String? = nil,
+        localEndpoint: String? = nil,
         dockerContainer: String? = nil,
         connectionMethod: ConnectionMethod = .auto,
         pollingInterval: TimeInterval = 5,
@@ -70,6 +72,7 @@ final class Connection {
         self.supervisorctlPath = supervisorctlPath
         self.supervisorConfigPath = supervisorConfigPath
         self.xmlrpcEndpoint = xmlrpcEndpoint
+        self.localEndpoint = localEndpoint
         self.dockerContainer = dockerContainer
         self.connectionMethodRaw = connectionMethod.rawValue
         self.pollingInterval = pollingInterval
@@ -92,6 +95,7 @@ final class Connection {
             supervisorctlPath: supervisorctlPath,
             supervisorConfigPath: supervisorConfigPath,
             xmlrpcEndpoint: xmlrpcEndpoint,
+            localEndpoint: localEndpoint,
             dockerContainer: dockerContainer,
             timeout: timeout
         )

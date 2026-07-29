@@ -4,147 +4,121 @@ final class SupervisorDockerProvider: ServiceManagerProvider, @unchecked Sendabl
     private let container: String
     private let supervisorctlPath: String
     private let timeout: TimeInterval
+    private let dockerBaseURL: URL
 
-    init(container: String, supervisorctlPath: String, timeout: TimeInterval) {
+    init(
+        container: String,
+        supervisorctlPath: String,
+        timeout: TimeInterval,
+        dockerEndpoint: String = "http://127.0.0.1:2375"
+    ) {
         self.container = container
         self.supervisorctlPath = supervisorctlPath
         self.timeout = timeout
+        self.dockerBaseURL = URL(string: dockerEndpoint)!
     }
 
     nonisolated func getAllProcesses() async throws -> [SupervisorProcess] {
-        let (stdout, _) = try await executeCommand(["status"])
-        return SupervisorSSHProvider.parseStatusOutput(stdout)
+        let output = try await execInContainer([supervisorctlPath, "status"])
+        return SupervisorSSHProvider.parseStatusOutput(output)
     }
 
     nonisolated func startProcess(_ name: String) async throws {
-        let (stdout, exitCode) = try await executeCommand(["start", name])
-        guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
+        let output = try await execInContainer([supervisorctlPath, "start", name])
+        if output.contains("ERROR") {
+            throw ProviderError.commandFailed(output)
+        }
     }
 
     nonisolated func stopProcess(_ name: String) async throws {
-        let (stdout, exitCode) = try await executeCommand(["stop", name])
-        guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
+        let output = try await execInContainer([supervisorctlPath, "stop", name])
+        if output.contains("ERROR") {
+            throw ProviderError.commandFailed(output)
+        }
     }
 
     nonisolated func restartProcess(_ name: String) async throws {
-        let (stdout, exitCode) = try await executeCommand(["restart", name])
-        guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
+        let output = try await execInContainer([supervisorctlPath, "restart", name])
+        if output.contains("ERROR") {
+            throw ProviderError.commandFailed(output)
+        }
     }
 
     nonisolated func getProcessMetrics(pid: Int) async throws -> ProcessMetrics {
-        let dockerPaths = ["/usr/local/bin/docker", "/opt/homebrew/bin/docker", "/usr/bin/docker"]
-        guard let dockerPath = dockerPaths.first(where: { FileManager.default.fileExists(atPath: $0) }) else {
-            throw ConnectionError.invalidConfiguration("Docker not found")
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: dockerPath)
-        process.arguments = ["exec", container, "ps", "-p", "\(pid)", "-o", "%cpu=," + "rss="]
-
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        let (stdout, exitCode) = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<(stdout: String, exitCode: Int32), Error>) in
-            final class ResumeFlag: @unchecked Sendable { var value = false }
-            let resumed = ResumeFlag()
-            let lock = NSLock()
-
-            let resumeOnce: @Sendable (Result<(stdout: String, exitCode: Int32), Error>) -> Void = { result in
-                lock.lock()
-                guard !resumed.value else { lock.unlock(); return }
-                resumed.value = true
-                lock.unlock()
-                continuation.resume(with: result)
-            }
-
-            process.terminationHandler = { proc in
-                let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-                resumeOnce(.success((stdout, proc.terminationStatus)))
-            }
-
-            do {
-                try process.run()
-            } catch {
-                resumeOnce(.failure(error))
-                return
-            }
-
-            DispatchQueue.global().asyncAfter(deadline: .now() + self.timeout) { [weak process] in
-                process?.terminate()
-                resumeOnce(.failure(ConnectionError.timeout))
-            }
-        }
-
-        guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
-
-        let parts = stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        let psOutput = try await execInContainer(["ps", "-p", "\(pid)", "-o", "pcpu=,rss="])
+        let trimmed = psOutput.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: ",", with: ".")
-            .split(separator: " ", omittingEmptySubsequences: true)
+        let parts = trimmed.split(separator: " ", omittingEmptySubsequences: true)
         guard parts.count >= 2,
               let cpu = Double(parts[0]),
               let rssKB = Double(parts[1]) else {
-            throw ProviderError.commandFailed("Could not parse metrics: \(stdout)")
+            throw ProviderError.commandFailed("Could not parse metrics: \(psOutput)")
         }
-
-        return ProcessMetrics(
-            timestamp: Date(),
-            cpuPercent: cpu,
-            memoryMB: rssKB / 1024.0
-        )
+        return ProcessMetrics(timestamp: Date(), cpuPercent: cpu, memoryMB: rssKB / 1024.0)
     }
 
-    private nonisolated func executeCommand(_ commandArguments: [String]) async throws -> (stdout: String, exitCode: Int32) {
-        let dockerPaths = ["/usr/local/bin/docker", "/opt/homebrew/bin/docker", "/usr/bin/docker"]
-        guard let dockerPath = dockerPaths.first(where: { FileManager.default.fileExists(atPath: $0) }) else {
-            throw ConnectionError.invalidConfiguration("Docker not found. Install Docker or specify the path in your connection settings.")
+    private nonisolated func execInContainer(_ command: [String]) async throws -> String {
+        let escapedCmd = command.map { arg in
+            arg.contains(" ") ? "'\(arg)'" : arg
+        }.joined(separator: " ")
+
+        let execBody: [String: Any] = [
+            "Cmd": ["/bin/sh", "-c", escapedCmd],
+            "AttachStdout": true,
+            "AttachStderr": true
+        ]
+
+        let createURL = dockerBaseURL.appendingPathComponent("/containers/\(container)/exec")
+        var createRequest = URLRequest(url: createURL)
+        createRequest.httpMethod = "POST"
+        createRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        createRequest.httpBody = try JSONSerialization.data(withJSONObject: execBody)
+        createRequest.timeoutInterval = timeout
+
+        let (createData, createResponse) = try await URLSession.shared.data(for: createRequest)
+        guard let httpResponse = createResponse as? HTTPURLResponse,
+              httpResponse.statusCode == 201 else {
+            throw ConnectionError.invalidConfiguration("Docker exec creation failed for container '\(container)'")
         }
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: dockerPath)
-        process.arguments = ["exec", container, supervisorctlPath] + commandArguments
+        struct ExecCreateResponse: Decodable {
+            let Id: String
+        }
+        let execInfo = try JSONDecoder().decode(ExecCreateResponse.self, from: createData)
+        let execID = execInfo.Id
 
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
+        let startURL = dockerBaseURL.appendingPathComponent("/exec/\(execID)/start")
+        var startRequest = URLRequest(url: startURL)
+        startRequest.httpMethod = "POST"
+        startRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        startRequest.httpBody = try JSONSerialization.data(withJSONObject: ["Detach": false, "Tty": false])
+        startRequest.timeoutInterval = timeout
 
-        return try await withCheckedThrowingContinuation { continuation in
-            final class ResumeFlag: @unchecked Sendable { var value = false }
-            let resumed = ResumeFlag()
-            let lock = NSLock()
+        let (startData, startResponse) = try await URLSession.shared.data(for: startRequest)
+        guard let startHTTPResponse = startResponse as? HTTPURLResponse,
+              startHTTPResponse.statusCode == 200 else {
+            throw ConnectionError.invalidConfiguration("Docker exec start failed for container '\(container)'")
+        }
 
-            let resumeOnce: @Sendable (Result<(stdout: String, exitCode: Int32), Error>) -> Void = { result in
-                lock.lock()
-                guard !resumed.value else { lock.unlock(); return }
-                resumed.value = true
-                lock.unlock()
-                continuation.resume(with: result)
-            }
+        return stripDockerExecFrames(startData)
+    }
 
-            process.terminationHandler = { proc in
-                let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-                let stderr = String(data: stderrData, encoding: .utf8) ?? ""
-                let output = stdout.isEmpty ? stderr : stdout
-
-                resumeOnce(.success((output, proc.terminationStatus)))
-            }
-
-            do {
-                try process.run()
-            } catch {
-                resumeOnce(.failure(error))
-                return
-            }
-
-            DispatchQueue.global().asyncAfter(deadline: .now() + self.timeout) { [weak process] in
-                process?.terminate()
-                resumeOnce(.failure(ConnectionError.timeout))
+    private nonisolated func stripDockerExecFrames(_ data: Data) -> String {
+        var offset = 0
+        var output = Data()
+        while offset + 8 <= data.count {
+            let frameSize = (UInt32(data[offset + 4]) << 24) |
+                (UInt32(data[offset + 5]) << 16) |
+                (UInt32(data[offset + 6]) << 8) |
+                UInt32(data[offset + 7])
+            offset += 8
+            if frameSize > 0, offset + Int(frameSize) <= data.count {
+                output.append(data[offset..<offset + Int(frameSize)])
+                offset += Int(frameSize)
+            } else {
+                break
             }
         }
+        return String(data: output, encoding: .utf8) ?? ""
     }
 }

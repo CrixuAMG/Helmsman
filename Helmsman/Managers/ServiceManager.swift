@@ -162,8 +162,7 @@ final class ServiceManager {
         switch connection.connectionMethod {
         case .local:
             let provider = SupervisorLocalProvider(
-                supervisorctlPath: config.supervisorctlPath,
-                supervisorConfigPath: config.supervisorConfigPath,
+                localEndpoint: config.localEndpoint ?? "http://127.0.0.1:9001/RPC2",
                 timeout: config.timeout
             )
             resolvedProvider = provider
@@ -177,7 +176,8 @@ final class ServiceManager {
             let provider = SupervisorDockerProvider(
                 container: container,
                 supervisorctlPath: config.supervisorctlPath,
-                timeout: config.timeout
+                timeout: config.timeout,
+                dockerEndpoint: "http://127.0.0.1:2375"
             )
             resolvedProvider = provider
             activeProviderName = "Docker"
@@ -203,10 +203,7 @@ final class ServiceManager {
                 activeProviderName = "XML-RPC"
                 return provider
             } catch {
-                let provider = try await createSSHProvider(config: config)
-                resolvedProvider = provider
-                activeProviderName = "SSH"
-                return provider
+                throw ConnectionError.connectionRefused
             }
         }
     }

@@ -1,167 +1,69 @@
 import Darwin
 import Foundation
 
-enum ProviderError: LocalizedError {
-    case commandFailed(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .commandFailed(let output):
-            return output.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-    }
-}
-
 final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable {
-    private let supervisorctlPath: String
-    private let supervisorConfigPath: String?
+    private let endpoint: URL
     private let timeout: TimeInterval
+    private let xmlrpcProvider: SupervisorXMLRPCProvider
     private let metricsSampler = LocalProcessMetricsSampler()
 
-    init(supervisorctlPath: String, supervisorConfigPath: String? = nil, timeout: TimeInterval) {
-        self.supervisorctlPath = supervisorctlPath
-        self.supervisorConfigPath = supervisorConfigPath
+    init(localEndpoint: String = "http://127.0.0.1:9001/RPC2", timeout: TimeInterval) {
+        self.endpoint = URL(string: localEndpoint) ?? URL(string: "http://127.0.0.1:9001/RPC2")!
         self.timeout = timeout
+        self.xmlrpcProvider = SupervisorXMLRPCProvider(
+            endpoint: self.endpoint,
+            username: nil,
+            password: nil,
+            timeout: timeout
+        )
     }
 
     nonisolated func getAllProcesses() async throws -> [SupervisorProcess] {
-        let (stdout, _) = try await executeCommand(["status"])
-        return SupervisorSSHProvider.parseStatusOutput(stdout)
+        try await xmlrpcProvider.getAllProcesses()
     }
 
     nonisolated func startProcess(_ name: String) async throws {
-        let (stdout, exitCode) = try await executeCommand(["start", name])
-        guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
+        try await xmlrpcProvider.startProcess(name)
     }
 
     nonisolated func stopProcess(_ name: String) async throws {
-        let (stdout, exitCode) = try await executeCommand(["stop", name])
-        guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
+        try await xmlrpcProvider.stopProcess(name)
     }
 
     nonisolated func restartProcess(_ name: String) async throws {
-        let (stdout, exitCode) = try await executeCommand(["restart", name])
-        guard exitCode == 0 else { throw ProviderError.commandFailed(stdout) }
+        try await xmlrpcProvider.restartProcess(name)
     }
 
     nonisolated func getProcessMetrics(pid: Int) async throws -> ProcessMetrics {
         try await metricsSampler.sample(pid: pid)
     }
-
-    private nonisolated func executeCommand(_ commandArguments: [String]) async throws -> (stdout: String, exitCode: Int32) {
-        let resolvedPath: String
-        if FileManager.default.fileExists(atPath: supervisorctlPath) {
-            resolvedPath = supervisorctlPath
-        } else if let found = await SupervisorctlFinder.find() {
-            resolvedPath = found
-        } else {
-            throw ConnectionError.invalidConfiguration("supervisorctl not found. Install it or specify the correct path.")
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: resolvedPath)
-        
-        var args: [String] = []
-        if let configPath = supervisorConfigPath {
-            args.append(contentsOf: ["-c", configPath])
-        }
-        args.append(contentsOf: commandArguments)
-        process.arguments = args
-
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        return try await withCheckedThrowingContinuation { continuation in
-            final class ResumeFlag: @unchecked Sendable { var value = false }
-            let resumed = ResumeFlag()
-            let lock = NSLock()
-
-            let resumeOnce: @Sendable (Result<(stdout: String, exitCode: Int32), Error>) -> Void = { result in
-                lock.lock()
-                guard !resumed.value else { lock.unlock(); return }
-                resumed.value = true
-                lock.unlock()
-                continuation.resume(with: result)
-            }
-
-            process.terminationHandler = { proc in
-                let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-                let stderr = String(data: stderrData, encoding: .utf8) ?? ""
-                let output = stdout.isEmpty ? stderr : stdout
-
-                resumeOnce(.success((output, proc.terminationStatus)))
-            }
-
-            do {
-                try process.run()
-            } catch {
-                resumeOnce(.failure(error))
-                return
-            }
-
-            DispatchQueue.global().asyncAfter(deadline: .now() + self.timeout) { [weak process] in
-                process?.terminate()
-                resumeOnce(.failure(ConnectionError.timeout))
-            }
-        }
-    }
-
 }
 
 private actor LocalProcessMetricsSampler {
-    private struct Snapshot {
-        let timestamp: Date
-        let cpuNanoseconds: UInt64
+    func sample(pid: Int) async throws -> ProcessMetrics {
+        guard let metrics = try? sampleMetrics(pid: pid) else {
+            return ProcessMetrics(timestamp: Date(), cpuPercent: 0, memoryMB: 0)
+        }
+        return metrics
     }
 
-    private var snapshotsByPID: [Int: Snapshot] = [:]
-
-    func sample(pid: Int) async throws -> ProcessMetrics {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/ps")
-        process.arguments = ["-p", "\(pid)", "-o", "pcpu=,rss="]
-
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        let (stdout, exitCode) = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<(stdout: String, exitCode: Int32), Error>) in
-            process.terminationHandler = { proc in
-                let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-                continuation.resume(with: .success((stdout, proc.terminationStatus)))
-            }
-
-            do {
-                try process.run()
-            } catch {
-                continuation.resume(with: .failure(error))
+    private func sampleMetrics(pid: Int) throws -> ProcessMetrics {
+        var taskInfo = proc_taskinfo()
+        let size = MemoryLayout<proc_taskinfo>.size
+        let result = withUnsafeMutablePointer(to: &taskInfo) { ptr in
+            ptr.withMemoryRebound(to: Int8.self, capacity: size) { bytePtr in
+                proc_pidinfo(Int32(pid), PROC_PIDTASKINFO, 0, bytePtr, Int32(size))
             }
         }
-
-        guard exitCode == 0 else {
-            throw ProviderError.commandFailed("Could not read process metrics for pid \(pid)")
+        guard result >= Int32(size) else {
+            throw ProviderError.commandFailed("Could not read process info for pid \(pid)")
         }
 
-        let parts = stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: ",", with: ".")
-            .split(separator: " ", omittingEmptySubsequences: true)
+        let cpuNS = taskInfo.pti_total_user + taskInfo.pti_total_system
+        let uptime = ProcessInfo.processInfo.systemUptime
+        let cpuPercent = uptime > 0 ? (Double(cpuNS) / 1_000_000_000.0 / uptime * 100.0) : 0
+        let memoryMB = Double(taskInfo.pti_resident_size) / (1024.0 * 1024.0)
 
-        guard parts.count >= 2,
-              let cpu = Double(parts[0]),
-              let rssKB = Double(parts[1]) else {
-            throw ProviderError.commandFailed("Could not parse metrics: \(stdout)")
-        }
-
-        return ProcessMetrics(
-            timestamp: Date(),
-            cpuPercent: cpu,
-            memoryMB: rssKB / 1024.0
-        )
+        return ProcessMetrics(timestamp: Date(), cpuPercent: cpuPercent, memoryMB: memoryMB)
     }
 }

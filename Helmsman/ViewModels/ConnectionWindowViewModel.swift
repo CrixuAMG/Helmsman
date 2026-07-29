@@ -18,6 +18,7 @@ final class ConnectionWindowViewModel {
     var supervisorctlPath: String = "/usr/bin/supervisorctl"
     var supervisorConfigPath: String = ""
     var xmlrpcEndpoint: String = ""
+    var localEndpoint: String = "http://127.0.0.1:9001/RPC2"
     var dockerContainer: String = ""
     var connectionMethod: ConnectionMethod = .auto
     var pollingInterval: TimeInterval = 5
@@ -83,6 +84,7 @@ final class ConnectionWindowViewModel {
             existing.supervisorctlPath = supervisorctlPath
             existing.supervisorConfigPath = supervisorConfigPath.isEmpty ? nil : supervisorConfigPath
             existing.xmlrpcEndpoint = xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint
+            existing.localEndpoint = localEndpoint.isEmpty ? nil : localEndpoint
             existing.dockerContainer = dockerContainer.isEmpty ? nil : dockerContainer
             existing.connectionMethod = connectionMethod
             existing.pollingInterval = pollingInterval
@@ -107,6 +109,7 @@ final class ConnectionWindowViewModel {
                 supervisorctlPath: supervisorctlPath,
                 supervisorConfigPath: supervisorConfigPath.isEmpty ? nil : supervisorConfigPath,
                 xmlrpcEndpoint: xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint,
+                localEndpoint: localEndpoint.isEmpty ? nil : localEndpoint,
                 dockerContainer: dockerContainer.isEmpty ? nil : dockerContainer,
                 connectionMethod: connectionMethod,
                 pollingInterval: pollingInterval,
@@ -157,8 +160,9 @@ final class ConnectionWindowViewModel {
             password: password.isEmpty ? nil : password,
             supervisorctlPath: supervisorctlPath,
             supervisorConfigPath: supervisorConfigPath.isEmpty ? nil : supervisorConfigPath,
-            xmlrpcEndpoint: xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint,
-            dockerContainer: dockerContainer.isEmpty ? nil : dockerContainer,
+                    xmlrpcEndpoint: xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint,
+                    localEndpoint: localEndpoint.isEmpty ? nil : localEndpoint,
+                    dockerContainer: dockerContainer.isEmpty ? nil : dockerContainer,
             timeout: timeout
         )
 
@@ -168,8 +172,7 @@ final class ConnectionWindowViewModel {
             switch connectionMethod {
             case .local:
                 provider = SupervisorLocalProvider(
-                    supervisorctlPath: config.supervisorctlPath,
-                    supervisorConfigPath: config.supervisorConfigPath,
+                    localEndpoint: config.localEndpoint ?? "http://127.0.0.1:9001/RPC2",
                     timeout: config.timeout
                 )
             case .docker:
@@ -233,6 +236,7 @@ final class ConnectionWindowViewModel {
         supervisorctlPath = connection.supervisorctlPath
         supervisorConfigPath = connection.supervisorConfigPath ?? ""
         xmlrpcEndpoint = connection.xmlrpcEndpoint ?? ""
+        localEndpoint = connection.localEndpoint ?? "http://127.0.0.1:9001/RPC2"
         dockerContainer = connection.dockerContainer ?? ""
         connectionMethod = connection.connectionMethod
         pollingInterval = connection.pollingInterval
@@ -254,6 +258,7 @@ final class ConnectionWindowViewModel {
         supervisorctlPath = "/usr/bin/supervisorctl"
         supervisorConfigPath = ""
         xmlrpcEndpoint = ""
+        localEndpoint = "http://127.0.0.1:9001/RPC2"
         dockerContainer = ""
         connectionMethod = .auto
         pollingInterval = 5

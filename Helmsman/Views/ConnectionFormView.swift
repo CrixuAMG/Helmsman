@@ -82,6 +82,8 @@ struct ConnectionFormView: View {
                         .frame(width: 100)
                 }
             }
+
+
         }
     }
 
@@ -135,34 +137,44 @@ struct ConnectionFormView: View {
 
     private var supervisorSection: some View {
         FormSection(title: "Supervisor") {
-            FormField(label: "supervisorctl Path") {
-                HStack {
-                    TextField("/usr/bin/supervisorctl", text: $viewModel.supervisorctlPath)
+            if viewModel.connectionMethod != .local {
+                FormField(label: "supervisorctl Path") {
+                    HStack {
+                        TextField("/usr/bin/supervisorctl", text: $viewModel.supervisorctlPath)
 
-                    Button("Detect") {
-                        Task { await viewModel.detectSupervisorctlPath() }
+                        Button("Detect") {
+                            Task { await viewModel.detectSupervisorctlPath() }
+                        }
                     }
                 }
-            }
 
-            FormField(label: "Config File Path") {
-                HStack {
-                    TextField("supervisord.conf (optional)", text: $viewModel.supervisorConfigPath)
+                FormField(label: "Config File Path") {
+                    HStack {
+                        TextField("supervisord.conf (optional)", text: $viewModel.supervisorConfigPath)
 
-                    Button("Browse") {
-                        let panel = NSOpenPanel()
-                        panel.allowsMultipleSelection = false
-                        panel.canChooseDirectories = false
-                        panel.canChooseFiles = true
-                        if panel.runModal() == .OK, let url = panel.url {
-                            viewModel.supervisorConfigPath = url.path
+                        Button("Browse") {
+                            let panel = NSOpenPanel()
+                            panel.allowsMultipleSelection = false
+                            panel.canChooseDirectories = false
+                            panel.canChooseFiles = true
+                            if panel.runModal() == .OK, let url = panel.url {
+                                viewModel.supervisorConfigPath = url.path
+                            }
                         }
                     }
                 }
             }
 
-            FormField(label: "XML-RPC Endpoint") {
-                TextField("http://localhost:9001/RPC2", text: $viewModel.xmlrpcEndpoint)
+            if viewModel.connectionMethod == .local {
+                FormField(label: "Local XML-RPC URL") {
+                    TextField("http://127.0.0.1:9001/RPC2", text: $viewModel.localEndpoint)
+                }
+            }
+
+            if viewModel.connectionMethod != .local {
+                FormField(label: "XML-RPC Endpoint") {
+                    TextField("http://localhost:9001/RPC2", text: $viewModel.xmlrpcEndpoint)
+                }
             }
         }
     }
@@ -258,7 +270,7 @@ struct ConnectionFormView: View {
 
         switch viewModel.connectionMethod {
         case .local:
-            return true
+            return !viewModel.localEndpoint.isEmpty
         case .docker:
             return !viewModel.dockerContainer.isEmpty
         case .ssh, .xmlrpc, .auto:
