@@ -162,7 +162,7 @@ final class ServiceManager {
         switch connection.connectionMethod {
         case .local:
             let provider = SupervisorLocalProvider(
-                localEndpoint: config.localEndpoint ?? "http://127.0.0.1:9001/RPC2",
+                supervisorctlPath: config.supervisorctlPath,
                 timeout: config.timeout
             )
             resolvedProvider = provider
@@ -177,7 +177,7 @@ final class ServiceManager {
                 container: container,
                 supervisorctlPath: config.supervisorctlPath,
                 timeout: config.timeout,
-                dockerEndpoint: "http://127.0.0.1:2375"
+                dockerEndpoint: dockerEndpoint(for: config)
             )
             resolvedProvider = provider
             activeProviderName = "Docker"
@@ -206,6 +206,12 @@ final class ServiceManager {
                 throw ConnectionError.connectionRefused
             }
         }
+    }
+
+    private func dockerEndpoint(for config: ProviderConfiguration) -> String {
+        let host = config.host.isEmpty ? "127.0.0.1" : config.host
+        let port = config.port == 0 ? 2375 : config.port
+        return "http://\(host):\(port)"
     }
 
     private func createSSHProvider(config: ProviderConfiguration) async throws -> any ServiceManagerProvider {

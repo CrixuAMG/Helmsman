@@ -63,7 +63,9 @@ final class SupervisorXMLRPCProvider: ServiceManagerProvider, @unchecked Sendabl
         }
 
         guard httpResponse.statusCode == 200 else {
-            throw ServiceError.actionFailed("HTTP \(httpResponse.statusCode)")
+            let hasAuth = request.allHTTPHeaderFields?["Authorization"] != nil
+            let detail = hasAuth ? "with auth" : "no auth sent"
+            throw ServiceError.actionFailed("HTTP \(httpResponse.statusCode) (\(detail))")
         }
 
         guard let xmlString = String(data: data, encoding: .utf8) else {

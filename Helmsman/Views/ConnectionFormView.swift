@@ -52,11 +52,11 @@ struct ConnectionFormView: View {
         }
     }
 
-    // MARK: - Server
+    // MARK: - Connection
 
     private var serverSection: some View {
-        FormSection(title: "Server") {
-            FormField(label: "Connection Method") {
+        FormSection(title: "Connection") {
+            FormField(label: "Method") {
                 Picker("", selection: $viewModel.connectionMethod) {
                     ForEach(ConnectionMethod.allCases, id: \.self) { method in
                         Text(method.displayName).tag(method)
@@ -64,26 +64,57 @@ struct ConnectionFormView: View {
                 }
                 .labelsHidden()
                 .frame(width: 200)
-            }
-
-            if viewModel.connectionMethod == .docker {
-                FormField(label: "Container") {
-                    TextField("my-supervisor-container", text: $viewModel.dockerContainer)
+                .onChange(of: viewModel.connectionMethod) { _, _ in
+                    viewModel.connectionMethodChanged()
                 }
             }
 
-            if viewModel.connectionMethod == .ssh || viewModel.connectionMethod == .xmlrpc || viewModel.connectionMethod == .auto {
-                FormField(label: "Host") {
-                    TextField("192.168.1.100", text: $viewModel.host)
-                }
+            switch viewModel.connectionMethod {
+            case .local:
+                EmptyView()
+            case .docker:
+                dockerFields
+            case .ssh:
+                hostAndPortFields(defaultPort: 22)
+            case .xmlrpc, .auto:
+                xmlrpcEndpointField
+            }
+        }
+    }
 
-                FormField(label: "Port") {
-                    TextField("22", value: $viewModel.port, format: .number)
-                        .frame(width: 100)
-                }
+    private var dockerFields: some View {
+        Group {
+            FormField(label: "Docker Host") {
+                TextField("127.0.0.1", text: $viewModel.host)
             }
 
+            FormField(label: "Docker Port") {
+                TextField("2375", value: $viewModel.port, format: .number)
+                    .frame(width: 100)
+            }
 
+            FormField(label: "Container") {
+                TextField("my-supervisor-container", text: $viewModel.dockerContainer)
+            }
+        }
+    }
+
+    private func hostAndPortFields(defaultPort: Int) -> some View {
+        Group {
+            FormField(label: "Host") {
+                TextField("192.168.1.100", text: $viewModel.host)
+            }
+
+            FormField(label: "Port") {
+                TextField("\(defaultPort)", value: $viewModel.port, format: .number)
+                    .frame(width: 100)
+            }
+        }
+    }
+
+    private var xmlrpcEndpointField: some View {
+        FormField(label: "XML-RPC URL") {
+            TextField("http://localhost:9001/RPC2", text: $viewModel.xmlrpcEndpoint)
         }
     }
 
@@ -91,89 +122,78 @@ struct ConnectionFormView: View {
 
     @ViewBuilder
     private var authenticationSection: some View {
-        if viewModel.connectionMethod == .ssh || viewModel.connectionMethod == .xmlrpc || viewModel.connectionMethod == .auto {
-            FormSection(title: "Authentication") {
-                FormField(label: "Username") {
-                    TextField("root", text: $viewModel.username)
-                }
+        if viewModel.connectionMethod == .ssh {
+            sshAuthenticationSection
+        } else if viewModel.connectionMethod == .xmlrpc || viewModel.connectionMethod == .auto {
+            xmlrpcAuthenticationSection
+        }
+    }
 
-                FormField(label: "Method") {
-                    Picker("", selection: $viewModel.authenticationMethod) {
-                        ForEach(AuthenticationMethod.allCases, id: \.self) { method in
-                            Text(method.displayName).tag(method)
-                        }
+    private var sshAuthenticationSection: some View {
+        FormSection(title: "Authentication") {
+            FormField(label: "Username") {
+                TextField("root", text: $viewModel.username)
+            }
+
+            FormField(label: "Method") {
+                Picker("", selection: $viewModel.authenticationMethod) {
+                    ForEach(AuthenticationMethod.allCases, id: \.self) { method in
+                        Text(method.displayName).tag(method)
                     }
-                    .labelsHidden()
-                    .frame(width: 200)
                 }
+                .labelsHidden()
+                .frame(width: 200)
+            }
 
-                if viewModel.authenticationMethod == .sshKey {
-                    FormField(label: "SSH Key Path") {
-                        HStack {
-                            TextField("~/.ssh/id_rsa", text: $viewModel.sshKeyPath)
-
-                            Button("Browse") {
-                                let panel = NSOpenPanel()
-                                panel.allowsMultipleSelection = false
-                                panel.canChooseDirectories = false
-                                panel.canChooseFiles = true
-                                if panel.runModal() == .OK, let url = panel.url {
-                                    viewModel.sshKeyPath = url.path
-                                }
+            if viewModel.authenticationMethod == .sshKey {
+                FormField(label: "SSH Key Path") {
+                    HStack {
+                        TextField("~/.ssh/id_rsa", text: $viewModel.sshKeyPath)
+                        Button("Browse") {
+                            chooseFile { url in
+                                viewModel.sshKeyPath = url.path
                             }
                         }
                     }
-                } else {
-                    FormField(label: "Password") {
-                        SecureField("Password", text: $viewModel.password)
-                            .frame(width: 300)
-                    }
                 }
+            } else {
+                FormField(label: "Password") {
+                    SecureField("Password", text: $viewModel.password)
+                        .frame(width: 300)
+                }
+            }
+        }
+    }
+
+    private var xmlrpcAuthenticationSection: some View {
+        FormSection(title: "Authentication") {
+            FormField(label: "Username") {
+                TextField("Optional", text: $viewModel.username)
+            }
+
+            FormField(label: "Password") {
+                SecureField("Optional", text: $viewModel.password)
+                    .frame(width: 300)
             }
         }
     }
 
     // MARK: - Supervisor
 
+    @ViewBuilder
     private var supervisorSection: some View {
-        FormSection(title: "Supervisor") {
-            if viewModel.connectionMethod != .local {
-                FormField(label: "supervisorctl Path") {
+        if viewModel.connectionMethod == .local || viewModel.connectionMethod == .docker || viewModel.connectionMethod == .ssh {
+            FormSection(title: "Supervisor") {
+                FormField(label: viewModel.connectionMethod == .docker ? "Path in Container" : "supervisorctl Path") {
                     HStack {
                         TextField("/usr/bin/supervisorctl", text: $viewModel.supervisorctlPath)
 
-                        Button("Detect") {
-                            Task { await viewModel.detectSupervisorctlPath() }
-                        }
-                    }
-                }
-
-                FormField(label: "Config File Path") {
-                    HStack {
-                        TextField("supervisord.conf (optional)", text: $viewModel.supervisorConfigPath)
-
-                        Button("Browse") {
-                            let panel = NSOpenPanel()
-                            panel.allowsMultipleSelection = false
-                            panel.canChooseDirectories = false
-                            panel.canChooseFiles = true
-                            if panel.runModal() == .OK, let url = panel.url {
-                                viewModel.supervisorConfigPath = url.path
+                        if viewModel.connectionMethod == .local {
+                            Button("Detect") {
+                                Task { await viewModel.detectSupervisorctlPath() }
                             }
                         }
                     }
-                }
-            }
-
-            if viewModel.connectionMethod == .local {
-                FormField(label: "Local XML-RPC URL") {
-                    TextField("http://127.0.0.1:9001/RPC2", text: $viewModel.localEndpoint)
-                }
-            }
-
-            if viewModel.connectionMethod != .local {
-                FormField(label: "XML-RPC Endpoint") {
-                    TextField("http://localhost:9001/RPC2", text: $viewModel.xmlrpcEndpoint)
                 }
             }
         }
@@ -266,15 +286,16 @@ struct ConnectionFormView: View {
     }
 
     private var isFormValid: Bool {
-        if viewModel.name.isEmpty { return false }
+        viewModel.isFormValid
+    }
 
-        switch viewModel.connectionMethod {
-        case .local:
-            return !viewModel.localEndpoint.isEmpty
-        case .docker:
-            return !viewModel.dockerContainer.isEmpty
-        case .ssh, .xmlrpc, .auto:
-            return !viewModel.host.isEmpty
+    private func chooseFile(onPick: (URL) -> Void) {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        if panel.runModal() == .OK, let url = panel.url {
+            onPick(url)
         }
     }
 }

@@ -2,40 +2,74 @@ import Darwin
 import Foundation
 
 final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable {
-    private let endpoint: URL
-    private let timeout: TimeInterval
-    private let xmlrpcProvider: SupervisorXMLRPCProvider
+    private let supervisorctlPath: String
     private let metricsSampler = LocalProcessMetricsSampler()
 
-    init(localEndpoint: String = "http://127.0.0.1:9001/RPC2", timeout: TimeInterval) {
-        self.endpoint = URL(string: localEndpoint) ?? URL(string: "http://127.0.0.1:9001/RPC2")!
-        self.timeout = timeout
-        self.xmlrpcProvider = SupervisorXMLRPCProvider(
-            endpoint: self.endpoint,
-            username: nil,
-            password: nil,
-            timeout: timeout
-        )
+    init(supervisorctlPath: String = "/usr/bin/supervisorctl", timeout: TimeInterval) {
+        self.supervisorctlPath = supervisorctlPath
     }
 
     nonisolated func getAllProcesses() async throws -> [SupervisorProcess] {
-        try await xmlrpcProvider.getAllProcesses()
+        let output = try await runSupervisorctl(["status"])
+        return SupervisorSSHProvider.parseStatusOutput(output)
     }
 
     nonisolated func startProcess(_ name: String) async throws {
-        try await xmlrpcProvider.startProcess(name)
+        let output = try await runSupervisorctl(["start", name])
+        if output.contains("ERROR") {
+            throw ProviderError.commandFailed(output)
+        }
     }
 
     nonisolated func stopProcess(_ name: String) async throws {
-        try await xmlrpcProvider.stopProcess(name)
+        let output = try await runSupervisorctl(["stop", name])
+        if output.contains("ERROR") {
+            throw ProviderError.commandFailed(output)
+        }
     }
 
     nonisolated func restartProcess(_ name: String) async throws {
-        try await xmlrpcProvider.restartProcess(name)
+        let output = try await runSupervisorctl(["restart", name])
+        if output.contains("ERROR") {
+            throw ProviderError.commandFailed(output)
+        }
     }
 
     nonisolated func getProcessMetrics(pid: Int) async throws -> ProcessMetrics {
         try await metricsSampler.sample(pid: pid)
+    }
+
+    private nonisolated func runSupervisorctl(_ arguments: [String]) async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: supervisorctlPath)
+            process.arguments = arguments
+
+            let outputPipe = Pipe()
+            let errorPipe = Pipe()
+            process.standardOutput = outputPipe
+            process.standardError = errorPipe
+
+            process.terminationHandler = { process in
+                let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                let output = String(data: outputData, encoding: .utf8) ?? ""
+                let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+                let fullOutput = output + errorOutput
+
+                if process.terminationStatus == 0 {
+                    continuation.resume(returning: fullOutput)
+                } else {
+                    continuation.resume(throwing: ProviderError.commandFailed(fullOutput))
+                }
+            }
+
+            do {
+                try process.run()
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
     }
 }
 

@@ -30,6 +30,21 @@ final class ConnectionWindowViewModel {
     var isTesting = false
     var testResult: TestResult?
 
+    var isFormValid: Bool {
+        guard !name.isEmpty else { return false }
+
+        switch connectionMethod {
+        case .local:
+            return !supervisorctlPath.isEmpty
+        case .docker:
+            return !host.isEmpty && port > 0 && !dockerContainer.isEmpty && !supervisorctlPath.isEmpty
+        case .ssh:
+            return !host.isEmpty && port > 0 && !username.isEmpty && !supervisorctlPath.isEmpty && hasValidSSHCredentials
+        case .xmlrpc, .auto:
+            return URL(string: xmlrpcEndpoint) != nil
+        }
+    }
+
     private var connectionManager: ConnectionManager?
 
     enum TestResult {
@@ -108,6 +123,32 @@ final class ConnectionWindowViewModel {
         }
     }
 
+    func connectionMethodChanged() {
+        testResult = nil
+
+        switch connectionMethod {
+        case .local:
+            host = ""
+            port = 0
+            username = ""
+            password = ""
+        case .docker:
+            if host.isEmpty { host = "127.0.0.1" }
+            if port == 0 || port == 22 { port = 2375 }
+            username = ""
+            password = ""
+        case .ssh:
+            if host == "127.0.0.1" { host = "" }
+            if port == 0 || port == 2375 { port = 22 }
+        case .xmlrpc, .auto:
+            host = ""
+            port = 0
+            if xmlrpcEndpoint.isEmpty {
+                xmlrpcEndpoint = "http://localhost:9001/RPC2"
+            }
+        }
+    }
+
     func testConnection() async {
         isTesting = true
         testResult = nil
@@ -154,15 +195,15 @@ final class ConnectionWindowViewModel {
         name = ""
         accentColorHex = "#007AFF"
         host = ""
-        port = 22
+        port = 0
         username = ""
         authenticationMethod = .sshKey
         sshKeyPath = ""
         password = ""
         supervisorctlPath = "/usr/bin/supervisorctl"
         supervisorConfigPath = ""
-        xmlrpcEndpoint = ""
-        localEndpoint = "http://127.0.0.1:9001/RPC2"
+        xmlrpcEndpoint = "http://localhost:9001/RPC2"
+        localEndpoint = ""
         dockerContainer = ""
         connectionMethod = .auto
         pollingInterval = 5
@@ -239,7 +280,7 @@ final class ConnectionWindowViewModel {
         switch connectionMethod {
         case .local:
             return SupervisorLocalProvider(
-                localEndpoint: config.localEndpoint ?? "http://127.0.0.1:9001/RPC2",
+                supervisorctlPath: config.supervisorctlPath,
                 timeout: config.timeout
             )
         case .docker:
@@ -249,7 +290,8 @@ final class ConnectionWindowViewModel {
             return SupervisorDockerProvider(
                 container: container,
                 supervisorctlPath: config.supervisorctlPath,
-                timeout: config.timeout
+                timeout: config.timeout,
+                dockerEndpoint: dockerEndpoint(for: config)
             )
         case .ssh:
             return SupervisorSSHProvider(
@@ -278,9 +320,31 @@ final class ConnectionWindowViewModel {
         }
     }
 
+    private var hasValidSSHCredentials: Bool {
+        switch authenticationMethod {
+        case .sshKey:
+            return !sshKeyPath.isEmpty
+        case .password:
+            return !password.isEmpty
+        }
+    }
+
+    private func dockerEndpoint(for config: ProviderConfiguration) -> String {
+        let dockerHost = config.host.isEmpty ? "127.0.0.1" : config.host
+        let dockerPort = config.port == 0 ? 2375 : config.port
+        return "http://\(dockerHost):\(dockerPort)"
+    }
+
     private func savePassword(for connection: Connection) {
-        guard authenticationMethod == .password, !password.isEmpty else { return }
-        try? KeychainManager.store(password: password, for: connection.id)
+        guard !password.isEmpty else { return }
+
+        let shouldSavePassword = connectionMethod == .xmlrpc
+            || connectionMethod == .auto
+            || (connectionMethod == .ssh && authenticationMethod == .password)
+
+        if shouldSavePassword {
+            try? KeychainManager.store(password: password, for: connection.id)
+        }
     }
 
     private func optionalText(_ text: String) -> String? {

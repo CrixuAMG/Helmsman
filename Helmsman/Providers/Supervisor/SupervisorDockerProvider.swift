@@ -15,7 +15,7 @@ final class SupervisorDockerProvider: ServiceManagerProvider, @unchecked Sendabl
         self.container = container
         self.supervisorctlPath = supervisorctlPath
         self.timeout = timeout
-        self.dockerBaseURL = URL(string: dockerEndpoint)!
+        self.dockerBaseURL = URL(string: dockerEndpoint) ?? URL(string: "http://127.0.0.1:2375")!
     }
 
     nonisolated func getAllProcesses() async throws -> [SupervisorProcess] {
@@ -78,7 +78,9 @@ final class SupervisorDockerProvider: ServiceManagerProvider, @unchecked Sendabl
         let (createData, createResponse) = try await URLSession.shared.data(for: createRequest)
         guard let httpResponse = createResponse as? HTTPURLResponse,
               httpResponse.statusCode == 201 else {
-            throw ConnectionError.invalidConfiguration("Docker exec creation failed for container '\(container)'")
+            let statusCode = (createResponse as? HTTPURLResponse)?.statusCode ?? 0
+            let message = String(data: createData, encoding: .utf8) ?? ""
+            throw ConnectionError.invalidConfiguration("Docker exec creation failed (HTTP \(statusCode)): \(message)")
         }
 
         struct ExecCreateResponse: Decodable {
@@ -97,7 +99,9 @@ final class SupervisorDockerProvider: ServiceManagerProvider, @unchecked Sendabl
         let (startData, startResponse) = try await URLSession.shared.data(for: startRequest)
         guard let startHTTPResponse = startResponse as? HTTPURLResponse,
               startHTTPResponse.statusCode == 200 else {
-            throw ConnectionError.invalidConfiguration("Docker exec start failed for container '\(container)'")
+            let statusCode = (startResponse as? HTTPURLResponse)?.statusCode ?? 0
+            let message = String(data: startData, encoding: .utf8) ?? ""
+            throw ConnectionError.invalidConfiguration("Docker exec start failed (HTTP \(statusCode)): \(message)")
         }
 
         return stripDockerExecFrames(startData)
