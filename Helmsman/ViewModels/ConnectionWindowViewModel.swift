@@ -5,29 +5,29 @@ import Observation
 final class ConnectionWindowViewModel {
     var connections: [Connection] = []
     var selectedConnectionID: UUID?
-    var isEditing: Bool = false
+    var isEditing = false
 
-    var name: String = ""
-    var accentColorHex: String = "#007AFF"
-    var host: String = ""
-    var port: Int = 22
-    var username: String = ""
+    var name = ""
+    var accentColorHex = "#007AFF"
+    var host = ""
+    var port = 22
+    var username = ""
     var authenticationMethod: AuthenticationMethod = .sshKey
-    var sshKeyPath: String = ""
-    var password: String = ""
-    var supervisorctlPath: String = "/usr/bin/supervisorctl"
-    var supervisorConfigPath: String = ""
-    var xmlrpcEndpoint: String = ""
-    var localEndpoint: String = "http://127.0.0.1:9001/RPC2"
-    var dockerContainer: String = ""
+    var sshKeyPath = ""
+    var password = ""
+    var supervisorctlPath = "/usr/bin/supervisorctl"
+    var supervisorConfigPath = ""
+    var xmlrpcEndpoint = ""
+    var localEndpoint = "http://127.0.0.1:9001/RPC2"
+    var dockerContainer = ""
     var connectionMethod: ConnectionMethod = .auto
     var pollingInterval: TimeInterval = 5
     var timeout: TimeInterval = 30
-    var autoReconnect: Bool = true
-    var safeMode: Bool = true
-    var notes: String = ""
+    var autoReconnect = true
+    var safeMode = true
+    var notes = ""
 
-    var isTesting: Bool = false
+    var isTesting = false
     var testResult: TestResult?
 
     private var connectionManager: ConnectionManager?
@@ -38,7 +38,7 @@ final class ConnectionWindowViewModel {
     }
 
     func setConnectionManager(_ manager: ConnectionManager) {
-        self.connectionManager = manager
+        connectionManager = manager
     }
 
     func loadConnections(_ connections: [Connection]) {
@@ -46,12 +46,13 @@ final class ConnectionWindowViewModel {
     }
 
     func selectConnection(_ connection: Connection?) {
-        guard let connection = connection else {
+        guard let connection else {
             selectedConnectionID = nil
             isEditing = false
             resetForm()
             return
         }
+
         selectedConnectionID = connection.id
         isEditing = false
         populateForm(from: connection)
@@ -73,63 +74,23 @@ final class ConnectionWindowViewModel {
     func save() {
         guard let manager = connectionManager else { return }
 
-        if let id = selectedConnectionID, let existing = connections.first(where: { $0.id == id }) {
-            existing.name = name
-            existing.accentColorHex = accentColorHex
-            existing.host = host
-            existing.port = port
-            existing.username = username
-            existing.authenticationMethod = authenticationMethod
-            existing.sshKeyPath = sshKeyPath.isEmpty ? nil : sshKeyPath
-            existing.supervisorctlPath = supervisorctlPath
-            existing.supervisorConfigPath = supervisorConfigPath.isEmpty ? nil : supervisorConfigPath
-            existing.xmlrpcEndpoint = xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint
-            existing.localEndpoint = localEndpoint.isEmpty ? nil : localEndpoint
-            existing.dockerContainer = dockerContainer.isEmpty ? nil : dockerContainer
-            existing.connectionMethod = connectionMethod
-            existing.pollingInterval = pollingInterval
-            existing.timeout = timeout
-            existing.autoReconnect = autoReconnect
-            existing.safeMode = safeMode
-            existing.notes = notes.isEmpty ? nil : notes
+        if let existing = selectedConnection {
+            update(existing)
             manager.update(existing)
-
-            if authenticationMethod == .password && !password.isEmpty {
-                try? KeychainManager.store(password: password, for: existing.id)
-            }
+            savePassword(for: existing)
         } else {
-            let connection = Connection(
-                name: name,
-                accentColorHex: accentColorHex,
-                host: host,
-                port: port,
-                username: username,
-                authenticationMethod: authenticationMethod,
-                sshKeyPath: sshKeyPath.isEmpty ? nil : sshKeyPath,
-                supervisorctlPath: supervisorctlPath,
-                supervisorConfigPath: supervisorConfigPath.isEmpty ? nil : supervisorConfigPath,
-                xmlrpcEndpoint: xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint,
-                localEndpoint: localEndpoint.isEmpty ? nil : localEndpoint,
-                dockerContainer: dockerContainer.isEmpty ? nil : dockerContainer,
-                connectionMethod: connectionMethod,
-                pollingInterval: pollingInterval,
-                timeout: timeout,
-                autoReconnect: autoReconnect,
-                safeMode: safeMode,
-                notes: notes.isEmpty ? nil : notes
-            )
+            let connection = makeConnection()
             manager.create(connection)
-
-            if authenticationMethod == .password && !password.isEmpty {
-                try? KeychainManager.store(password: password, for: connection.id)
-            }
+            savePassword(for: connection)
         }
     }
 
     func delete(_ connection: Connection) {
         guard let manager = connectionManager else { return }
+
         KeychainManager.deletePassword(for: connection.id)
         manager.delete(connection)
+
         if selectedConnectionID == connection.id {
             selectedConnectionID = nil
             isEditing = false
@@ -151,70 +112,8 @@ final class ConnectionWindowViewModel {
         isTesting = true
         testResult = nil
 
-        let config = ProviderConfiguration(
-            host: host,
-            port: port,
-            username: username,
-            authenticationMethod: authenticationMethod,
-            sshKeyPath: sshKeyPath.isEmpty ? nil : sshKeyPath,
-            password: password.isEmpty ? nil : password,
-            supervisorctlPath: supervisorctlPath,
-            supervisorConfigPath: supervisorConfigPath.isEmpty ? nil : supervisorConfigPath,
-                    xmlrpcEndpoint: xmlrpcEndpoint.isEmpty ? nil : xmlrpcEndpoint,
-                    localEndpoint: localEndpoint.isEmpty ? nil : localEndpoint,
-                    dockerContainer: dockerContainer.isEmpty ? nil : dockerContainer,
-            timeout: timeout
-        )
-
         do {
-            let provider: any ServiceManagerProvider
-
-            switch connectionMethod {
-            case .local:
-                provider = SupervisorLocalProvider(
-                    localEndpoint: config.localEndpoint ?? "http://127.0.0.1:9001/RPC2",
-                    timeout: config.timeout
-                )
-            case .docker:
-                guard let container = config.dockerContainer, !container.isEmpty else {
-                    testResult = .failure("Docker container name is required")
-                    isTesting = false
-                    return
-                }
-                provider = SupervisorDockerProvider(
-                    container: container,
-                    supervisorctlPath: config.supervisorctlPath,
-                    timeout: config.timeout
-                )
-            case .ssh:
-                provider = SupervisorSSHProvider(
-                    host: config.host,
-                    port: config.port,
-                    username: config.username,
-                    authenticationMethod: config.authenticationMethod,
-                    sshKeyPath: config.sshKeyPath,
-                    password: config.password,
-                    supervisorctlPath: config.supervisorctlPath,
-                    timeout: config.timeout
-                )
-            case .xmlrpc:
-                guard let endpointStr = config.xmlrpcEndpoint, let endpoint = URL(string: endpointStr) else {
-                    testResult = .failure("Valid XML-RPC endpoint is required")
-                    isTesting = false
-                    return
-                }
-                provider = SupervisorXMLRPCProvider(
-                    endpoint: endpoint,
-                    username: config.username,
-                    password: config.password,
-                    timeout: config.timeout
-                )
-            case .auto:
-                testResult = .failure("Please select a specific connection method to test")
-                isTesting = false
-                return
-            }
-
+            let provider = try makeTestProvider()
             let processes = try await provider.getAllProcesses()
             testResult = .success("Connected successfully. Found \(processes.count) service(s).")
         } catch {
@@ -222,6 +121,11 @@ final class ConnectionWindowViewModel {
         }
 
         isTesting = false
+    }
+
+    private var selectedConnection: Connection? {
+        guard let selectedConnectionID else { return nil }
+        return connections.first { $0.id == selectedConnectionID }
     }
 
     private func populateForm(from connection: Connection) {
@@ -266,5 +170,120 @@ final class ConnectionWindowViewModel {
         autoReconnect = true
         safeMode = true
         notes = ""
+    }
+
+    private func makeConnection() -> Connection {
+        Connection(
+            name: name,
+            accentColorHex: accentColorHex,
+            host: host,
+            port: port,
+            username: username,
+            authenticationMethod: authenticationMethod,
+            sshKeyPath: optionalText(sshKeyPath),
+            supervisorctlPath: supervisorctlPath,
+            supervisorConfigPath: optionalText(supervisorConfigPath),
+            xmlrpcEndpoint: optionalText(xmlrpcEndpoint),
+            localEndpoint: optionalText(localEndpoint),
+            dockerContainer: optionalText(dockerContainer),
+            connectionMethod: connectionMethod,
+            pollingInterval: pollingInterval,
+            timeout: timeout,
+            autoReconnect: autoReconnect,
+            safeMode: safeMode,
+            notes: optionalText(notes)
+        )
+    }
+
+    private func update(_ connection: Connection) {
+        connection.name = name
+        connection.accentColorHex = accentColorHex
+        connection.host = host
+        connection.port = port
+        connection.username = username
+        connection.authenticationMethod = authenticationMethod
+        connection.sshKeyPath = optionalText(sshKeyPath)
+        connection.supervisorctlPath = supervisorctlPath
+        connection.supervisorConfigPath = optionalText(supervisorConfigPath)
+        connection.xmlrpcEndpoint = optionalText(xmlrpcEndpoint)
+        connection.localEndpoint = optionalText(localEndpoint)
+        connection.dockerContainer = optionalText(dockerContainer)
+        connection.connectionMethod = connectionMethod
+        connection.pollingInterval = pollingInterval
+        connection.timeout = timeout
+        connection.autoReconnect = autoReconnect
+        connection.safeMode = safeMode
+        connection.notes = optionalText(notes)
+    }
+
+    private func makeProviderConfiguration() -> ProviderConfiguration {
+        ProviderConfiguration(
+            host: host,
+            port: port,
+            username: username,
+            authenticationMethod: authenticationMethod,
+            sshKeyPath: optionalText(sshKeyPath),
+            password: optionalText(password),
+            supervisorctlPath: supervisorctlPath,
+            supervisorConfigPath: optionalText(supervisorConfigPath),
+            xmlrpcEndpoint: optionalText(xmlrpcEndpoint),
+            localEndpoint: optionalText(localEndpoint),
+            dockerContainer: optionalText(dockerContainer),
+            timeout: timeout
+        )
+    }
+
+    private func makeTestProvider() throws -> any ServiceManagerProvider {
+        let config = makeProviderConfiguration()
+
+        switch connectionMethod {
+        case .local:
+            return SupervisorLocalProvider(
+                localEndpoint: config.localEndpoint ?? "http://127.0.0.1:9001/RPC2",
+                timeout: config.timeout
+            )
+        case .docker:
+            guard let container = config.dockerContainer, !container.isEmpty else {
+                throw ConnectionError.invalidConfiguration("Docker container name is required")
+            }
+            return SupervisorDockerProvider(
+                container: container,
+                supervisorctlPath: config.supervisorctlPath,
+                timeout: config.timeout
+            )
+        case .ssh:
+            return SupervisorSSHProvider(
+                host: config.host,
+                port: config.port,
+                username: config.username,
+                authenticationMethod: config.authenticationMethod,
+                sshKeyPath: config.sshKeyPath,
+                password: config.password,
+                supervisorctlPath: config.supervisorctlPath,
+                timeout: config.timeout
+            )
+        case .xmlrpc:
+            guard let endpointString = config.xmlrpcEndpoint,
+                  let endpoint = URL(string: endpointString) else {
+                throw ConnectionError.invalidConfiguration("Valid XML-RPC endpoint is required")
+            }
+            return SupervisorXMLRPCProvider(
+                endpoint: endpoint,
+                username: config.username,
+                password: config.password,
+                timeout: config.timeout
+            )
+        case .auto:
+            throw ConnectionError.invalidConfiguration("Please select a specific connection method to test")
+        }
+    }
+
+    private func savePassword(for connection: Connection) {
+        guard authenticationMethod == .password, !password.isEmpty else { return }
+        try? KeychainManager.store(password: password, for: connection.id)
+    }
+
+    private func optionalText(_ text: String) -> String? {
+        text.isEmpty ? nil : text
     }
 }
