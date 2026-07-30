@@ -35,7 +35,7 @@ final class ConnectionWindowViewModel {
 
         switch connectionMethod {
         case .local:
-            return !supervisorctlPath.isEmpty
+            return URL(string: localEndpoint) != nil
         case .docker:
             return !host.isEmpty && port > 0 && !dockerContainer.isEmpty && !supervisorctlPath.isEmpty
         case .ssh:
@@ -130,8 +130,9 @@ final class ConnectionWindowViewModel {
         case .local:
             host = ""
             port = 0
-            username = ""
-            password = ""
+            if localEndpoint.isEmpty {
+                localEndpoint = "http://127.0.0.1:9001/RPC2"
+            }
         case .docker:
             if host.isEmpty { host = "127.0.0.1" }
             if port == 0 || port == 22 { port = 2375 }

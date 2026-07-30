@@ -71,7 +71,7 @@ struct ConnectionFormView: View {
 
             switch viewModel.connectionMethod {
             case .local:
-                EmptyView()
+                localEndpointField
             case .docker:
                 dockerFields
             case .ssh:
@@ -89,7 +89,7 @@ struct ConnectionFormView: View {
             }
 
             FormField(label: "Docker Port") {
-                TextField("2375", value: $viewModel.port, format: .number)
+                TextField("2375", value: $viewModel.port, format: .number.locale(Locale(identifier: "en_US")))
                     .frame(width: 100)
             }
 
@@ -112,6 +112,12 @@ struct ConnectionFormView: View {
         }
     }
 
+    private var localEndpointField: some View {
+        FormField(label: "XML-RPC URL") {
+            TextField("http://127.0.0.1:9001/RPC2", text: $viewModel.localEndpoint)
+        }
+    }
+
     private var xmlrpcEndpointField: some View {
         FormField(label: "XML-RPC URL") {
             TextField("http://localhost:9001/RPC2", text: $viewModel.xmlrpcEndpoint)
@@ -124,7 +130,7 @@ struct ConnectionFormView: View {
     private var authenticationSection: some View {
         if viewModel.connectionMethod == .ssh {
             sshAuthenticationSection
-        } else if viewModel.connectionMethod == .xmlrpc || viewModel.connectionMethod == .auto {
+        } else if viewModel.connectionMethod == .local || viewModel.connectionMethod == .xmlrpc || viewModel.connectionMethod == .auto {
             xmlrpcAuthenticationSection
         }
     }
