@@ -60,6 +60,8 @@ final class MainWindowViewModel {
                     await self?.reconnect()
                 }
             )
+        } else {
+            errorAlert = nil
         }
     }
 

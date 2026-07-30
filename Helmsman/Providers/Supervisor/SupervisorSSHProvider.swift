@@ -46,7 +46,7 @@ final class SupervisorSSHProvider: ServiceManagerProvider, @unchecked Sendable {
     }
 
     nonisolated func getAllProcesses() async throws -> [SupervisorProcess] {
-        let output = try await executeSSH("\(supervisorctlPath) status")
+        let output = try await executeSSH("\(supervisorctlPath) status", allowsNonZeroExit: true)
         return Self.parseStatusOutput(output)
     }
 
@@ -84,7 +84,7 @@ final class SupervisorSSHProvider: ServiceManagerProvider, @unchecked Sendable {
         return ProcessMetrics(timestamp: Date(), cpuPercent: cpu, memoryMB: rssKB / 1024.0)
     }
 
-    private nonisolated func executeSSH(_ command: String) async throws -> String {
+    private nonisolated func executeSSH(_ command: String, allowsNonZeroExit: Bool = false) async throws -> String {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
         do {
@@ -154,7 +154,7 @@ final class SupervisorSSHProvider: ServiceManagerProvider, @unchecked Sendable {
 
             try await channel.close().get()
 
-            if exitStatus != 0 {
+            if exitStatus != 0 && !allowsNonZeroExit {
                 let output = (try? await outputPromise.futureResult.get()) ?? ""
                 throw ProviderError.commandFailed(output)
             }

@@ -3,15 +3,14 @@ import Foundation
 final class XMLRPCResponseParser: NSObject, @unchecked Sendable, XMLParserDelegate {
     private let xml: String
     nonisolated(unsafe) private var result: XMLRPCValue?
+    nonisolated(unsafe) private var faultValue: XMLRPCValue?
     nonisolated(unsafe) private var error: Error?
 
-    nonisolated(unsafe) private var currentElement: String = ""
-    nonisolated(unsafe) private var currentText: String = ""
-    nonisolated(unsafe) private var valueStack: [XMLRPCValue] = []
-    nonisolated(unsafe) private var nameStack: [String] = []
-    nonisolated(unsafe) private var structFields: [[String: XMLRPCValue]] = []
+    nonisolated(unsafe) private var elementStack: [String] = []
+    nonisolated(unsafe) private var currentText = ""
+    nonisolated(unsafe) private var pendingValue: XMLRPCValue?
+    nonisolated(unsafe) private var containers: [XMLRPCContainer] = []
     nonisolated(unsafe) private var inFault = false
-    nonisolated(unsafe) private var faultString: String = ""
 
     nonisolated init(xml: String) {
         self.xml = xml
@@ -30,8 +29,8 @@ final class XMLRPCResponseParser: NSObject, @unchecked Sendable, XMLParserDelega
             throw error
         }
 
-        if inFault {
-            throw ServiceError.actionFailed("XML-RPC Fault: \(faultString)")
+        if let faultValue {
+            throw ServiceError.actionFailed("XML-RPC Fault: \(faultDescription(from: faultValue))")
         }
 
         guard let result = result else {
@@ -41,17 +40,23 @@ final class XMLRPCResponseParser: NSObject, @unchecked Sendable, XMLParserDelega
         return result
     }
 
-    nonisolated func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
-        currentElement = elementName
+    nonisolated func parser(
+        _ parser: XMLParser,
+        didStartElement elementName: String,
+        namespaceURI: String?,
+        qualifiedName qName: String?,
+        attributes attributeDict: [String: String] = [:]
+    ) {
+        elementStack.append(elementName)
         currentText = ""
 
         switch elementName {
         case "fault":
             inFault = true
-        case "struct":
-            structFields.append([:])
         case "array":
-            valueStack.append(.array([]))
+            containers.append(.array([]))
+        case "struct":
+            containers.append(.struct(fields: [:], pendingName: nil))
         default:
             break
         }
@@ -61,61 +66,40 @@ final class XMLRPCResponseParser: NSObject, @unchecked Sendable, XMLParserDelega
         currentText += string
     }
 
-    nonisolated func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
+    nonisolated func parser(
+        _ parser: XMLParser,
+        didEndElement elementName: String,
+        namespaceURI: String?,
+        qualifiedName qName: String?
+    ) {
         let trimmed = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         switch elementName {
         case "name":
-            nameStack.append(trimmed)
-
+            setPendingStructName(trimmed)
         case "string":
-            pushValue(.string(trimmed))
-
+            pendingValue = .string(trimmed)
         case "int", "i4", "i8":
-            if let intVal = Int(trimmed) {
-                pushValue(.int(intVal))
+            if let intValue = Int(trimmed) {
+                pendingValue = .int(intValue)
+            } else {
+                error = ServiceError.actionFailed("Invalid integer value: \(trimmed)")
             }
-
         case "boolean":
-            pushValue(.bool(trimmed == "1" || trimmed.lowercased() == "true"))
-
-        case "member":
-            if let name = nameStack.popLast(),
-               let value = valueStack.popLast(),
-               !structFields.isEmpty {
-                structFields[structFields.count - 1][name] = value
-            }
-
-        case "struct":
-            if let fields = structFields.popLast() {
-                pushValue(.struct(fields))
-            }
-
+            pendingValue = .bool(trimmed == "1" || trimmed.lowercased() == "true")
         case "array":
-            if case .array(let items) = valueStack.popLast() {
-                pushValue(.array(items))
-            }
-
+            finishArray()
+        case "struct":
+            finishStruct()
         case "value":
-            if !trimmed.isEmpty && valueStack.isEmpty {
-                pushValue(.string(trimmed))
-            }
-
-        case "param":
-            if let value = valueStack.popLast() {
-                result = value
-            }
-
-        case "fault":
-            if case .struct(let fields) = valueStack.popLast(),
-               case .string(let message) = fields["faultString"] {
-                faultString = message
-            }
-
+            finishValue(defaultString: trimmed)
         default:
             break
         }
 
+        if elementStack.last == elementName {
+            elementStack.removeLast()
+        }
         currentText = ""
     }
 
@@ -123,13 +107,90 @@ final class XMLRPCResponseParser: NSObject, @unchecked Sendable, XMLParserDelega
         error = ServiceError.actionFailed("XML parse error: \(parseError.localizedDescription)")
     }
 
-    private nonisolated func pushValue(_ value: XMLRPCValue) {
-        if case .array(var items) = valueStack.last {
-            valueStack.removeLast()
-            items.append(value)
-            valueStack.append(.array(items))
+    private nonisolated func finishArray() {
+        guard case .array(let items) = containers.popLast() else {
+            error = ServiceError.actionFailed("Malformed XML-RPC array")
+            return
+        }
+        pendingValue = .array(items)
+    }
+
+    private nonisolated func finishStruct() {
+        guard case .struct(let fields, _) = containers.popLast() else {
+            error = ServiceError.actionFailed("Malformed XML-RPC struct")
+            return
+        }
+        pendingValue = .struct(fields)
+    }
+
+    private nonisolated func finishValue(defaultString: String) {
+        guard let value = pendingValue ?? (defaultString.isEmpty ? nil : .string(defaultString)) else {
+            return
+        }
+
+        if inFault, parentElement == "fault" {
+            faultValue = value
+        } else if parentElement == "param" {
+            result = value
         } else {
-            valueStack.append(value)
+            appendToCurrentContainer(value)
+        }
+
+        pendingValue = nil
+    }
+
+    private nonisolated func appendToCurrentContainer(_ value: XMLRPCValue) {
+        guard let container = containers.popLast() else { return }
+
+        switch container {
+        case .array(var items):
+            items.append(value)
+            containers.append(.array(items))
+        case .struct(var fields, let pendingName):
+            guard let pendingName else {
+                error = ServiceError.actionFailed("XML-RPC struct member is missing a name")
+                containers.append(.struct(fields: fields, pendingName: pendingName))
+                return
+            }
+            fields[pendingName] = value
+            containers.append(.struct(fields: fields, pendingName: nil))
         }
     }
+
+    private nonisolated func setPendingStructName(_ name: String) {
+        guard let container = containers.popLast() else { return }
+
+        switch container {
+        case .array:
+            containers.append(container)
+        case .struct(let fields, _):
+            containers.append(.struct(fields: fields, pendingName: name))
+        }
+    }
+
+    private nonisolated var parentElement: String? {
+        guard elementStack.count >= 2 else { return nil }
+        return elementStack[elementStack.count - 2]
+    }
+
+    private nonisolated func faultDescription(from value: XMLRPCValue) -> String {
+        guard case .struct(let fields) = value else {
+            return "Unknown fault"
+        }
+
+        if case .string(let message) = fields["faultString"] {
+            return message
+        }
+
+        if case .int(let code) = fields["faultCode"] {
+            return "Fault code \(code)"
+        }
+
+        return "Unknown fault"
+    }
+}
+
+private enum XMLRPCContainer: Sendable {
+    case array([XMLRPCValue])
+    case `struct`(fields: [String: XMLRPCValue], pendingName: String?)
 }

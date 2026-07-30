@@ -9,10 +9,17 @@ struct ConnectionFormView: View {
                 generalSection
                 Divider()
                 serverSection
-                Divider()
-                authenticationSection
-                Divider()
-                supervisorSection
+
+                if showsAuthenticationSection {
+                    Divider()
+                    authenticationSection
+                }
+
+                if showsSupervisorSection {
+                    Divider()
+                    supervisorSection
+                }
+
                 Divider()
                 optionsSection
                 Divider()
@@ -21,6 +28,14 @@ struct ConnectionFormView: View {
             .padding(32)
         }
         .background(.background)
+    }
+
+    private var showsAuthenticationSection: Bool {
+        viewModel.connectionMethod == .ssh || viewModel.connectionMethod == .docker || viewModel.connectionMethod == .xmlrpc
+    }
+
+    private var showsSupervisorSection: Bool {
+        viewModel.connectionMethod != .docker
     }
 
     // MARK: - General
@@ -68,11 +83,15 @@ struct ConnectionFormView: View {
 
             if viewModel.connectionMethod == .docker {
                 FormField(label: "Container") {
-                    TextField("my-supervisor-container", text: $viewModel.dockerContainer)
+                    TextField("container-name", text: $viewModel.dockerContainer)
+                }
+
+                FormField(label: "Supervisor URL") {
+                    TextField("http://127.0.0.1:9001/RPC2", text: $viewModel.xmlrpcEndpoint)
                 }
             }
 
-            if viewModel.connectionMethod == .ssh || viewModel.connectionMethod == .xmlrpc || viewModel.connectionMethod == .auto {
+            if viewModel.connectionMethod == .ssh {
                 FormField(label: "Host") {
                     TextField("192.168.1.100", text: $viewModel.host)
                 }
@@ -91,7 +110,7 @@ struct ConnectionFormView: View {
 
     @ViewBuilder
     private var authenticationSection: some View {
-        if viewModel.connectionMethod == .ssh || viewModel.connectionMethod == .xmlrpc || viewModel.connectionMethod == .auto {
+        if viewModel.connectionMethod == .ssh {
             FormSection(title: "Authentication") {
                 FormField(label: "Username") {
                     TextField("root", text: $viewModel.username)
@@ -124,56 +143,77 @@ struct ConnectionFormView: View {
                         }
                     }
                 } else {
-                    FormField(label: "Password") {
-                        SecureField("Password", text: $viewModel.password)
-                            .frame(width: 300)
-                    }
+                    passwordField
                 }
             }
+        } else if viewModel.connectionMethod == .docker || viewModel.connectionMethod == .xmlrpc {
+            FormSection(title: "Authentication") {
+                FormField(label: "Username") {
+                    TextField("Optional username", text: $viewModel.username)
+                }
+
+                passwordField
+            }
+        }
+    }
+
+    private var passwordField: some View {
+        FormField(label: "Password") {
+            SecureField("Optional password", text: $viewModel.password)
+                .frame(width: 300)
         }
     }
 
     // MARK: - Supervisor
 
+    @ViewBuilder
     private var supervisorSection: some View {
-        FormSection(title: "Supervisor") {
-            if viewModel.connectionMethod != .local {
-                FormField(label: "supervisorctl Path") {
-                    HStack {
-                        TextField("/usr/bin/supervisorctl", text: $viewModel.supervisorctlPath)
+        if viewModel.connectionMethod != .docker {
+            FormSection(title: "Supervisor") {
+                if viewModel.connectionMethod == .local || viewModel.connectionMethod == .ssh {
+                    FormField(label: "supervisorctl Path") {
+                        HStack {
+                            TextField("/usr/bin/supervisorctl", text: $viewModel.supervisorctlPath)
 
-                        Button("Detect") {
-                            Task { await viewModel.detectSupervisorctlPath() }
-                        }
-                    }
-                }
-
-                FormField(label: "Config File Path") {
-                    HStack {
-                        TextField("supervisord.conf (optional)", text: $viewModel.supervisorConfigPath)
-
-                        Button("Browse") {
-                            let panel = NSOpenPanel()
-                            panel.allowsMultipleSelection = false
-                            panel.canChooseDirectories = false
-                            panel.canChooseFiles = true
-                            if panel.runModal() == .OK, let url = panel.url {
-                                viewModel.supervisorConfigPath = url.path
+                            if viewModel.connectionMethod == .local {
+                                Button("Detect") {
+                                    Task { await viewModel.detectSupervisorctlPath() }
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            if viewModel.connectionMethod == .local {
-                FormField(label: "Local XML-RPC URL") {
-                    TextField("http://127.0.0.1:9001/RPC2", text: $viewModel.localEndpoint)
+                if viewModel.connectionMethod == .local {
+                    FormField(label: "Local XML-RPC URL") {
+                        TextField("http://127.0.0.1:9001/RPC2", text: $viewModel.localEndpoint)
+                    }
                 }
-            }
 
-            if viewModel.connectionMethod != .local {
-                FormField(label: "XML-RPC Endpoint") {
-                    TextField("http://localhost:9001/RPC2", text: $viewModel.xmlrpcEndpoint)
+                if viewModel.connectionMethod == .xmlrpc {
+                    FormField(label: "XML-RPC Endpoint") {
+                        TextField("http://127.0.0.1:9001/RPC2", text: $viewModel.xmlrpcEndpoint)
+                    }
+                }
+
+                if viewModel.connectionMethod == .local || viewModel.connectionMethod == .ssh {
+                    FormField(label: "Config File Path") {
+                        HStack {
+                            TextField("supervisord.conf (optional)", text: $viewModel.supervisorConfigPath)
+
+                            if viewModel.connectionMethod == .local {
+                                Button("Browse") {
+                                    let panel = NSOpenPanel()
+                                    panel.allowsMultipleSelection = false
+                                    panel.canChooseDirectories = false
+                                    panel.canChooseFiles = true
+                                    if panel.runModal() == .OK, let url = panel.url {
+                                        viewModel.supervisorConfigPath = url.path
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -270,11 +310,13 @@ struct ConnectionFormView: View {
 
         switch viewModel.connectionMethod {
         case .local:
-            return !viewModel.localEndpoint.isEmpty
+            return !viewModel.localEndpoint.isEmpty && !viewModel.supervisorctlPath.isEmpty
         case .docker:
-            return !viewModel.dockerContainer.isEmpty
-        case .ssh, .xmlrpc, .auto:
-            return !viewModel.host.isEmpty
+            return !viewModel.dockerContainer.isEmpty && !viewModel.xmlrpcEndpoint.isEmpty
+        case .ssh:
+            return !viewModel.host.isEmpty && !viewModel.username.isEmpty && !viewModel.supervisorctlPath.isEmpty
+        case .xmlrpc:
+            return !viewModel.xmlrpcEndpoint.isEmpty
         }
     }
 }

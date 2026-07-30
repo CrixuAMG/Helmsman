@@ -47,11 +47,15 @@ struct MainWindow: View {
         .onChange(of: viewModel.safeModeAlert?.id) { _, newID in
             if let alert = viewModel.safeModeAlert, newID != nil {
                 activeAlert = .safeMode(alert)
+            } else if case .safeMode = activeAlert {
+                activeAlert = nil
             }
         }
         .onChange(of: viewModel.errorAlert?.id) { _, newID in
             if let alert = viewModel.errorAlert, newID != nil {
                 activeAlert = .error(alert)
+            } else if case .error = activeAlert {
+                activeAlert = nil
             }
         }
         .alert(item: $activeAlert) { alert in

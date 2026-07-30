@@ -17,10 +17,11 @@ final class ConnectionWindowViewModel {
     var password = ""
     var supervisorctlPath = "/usr/bin/supervisorctl"
     var supervisorConfigPath = ""
-    var xmlrpcEndpoint = ""
+    var xmlrpcEndpoint = "http://127.0.0.1:9001/RPC2"
     var localEndpoint = "http://127.0.0.1:9001/RPC2"
     var dockerContainer = ""
-    var connectionMethod: ConnectionMethod = .auto
+    var dockerEndpoint = ""
+    var connectionMethod: ConnectionMethod = .local
     var pollingInterval: TimeInterval = 5
     var timeout: TimeInterval = 30
     var autoReconnect = true
@@ -139,9 +140,10 @@ final class ConnectionWindowViewModel {
         password = KeychainManager.retrievePassword(for: connection.id) ?? ""
         supervisorctlPath = connection.supervisorctlPath
         supervisorConfigPath = connection.supervisorConfigPath ?? ""
-        xmlrpcEndpoint = connection.xmlrpcEndpoint ?? ""
+        xmlrpcEndpoint = connection.xmlrpcEndpoint ?? "http://127.0.0.1:9001/RPC2"
         localEndpoint = connection.localEndpoint ?? "http://127.0.0.1:9001/RPC2"
         dockerContainer = connection.dockerContainer ?? ""
+        dockerEndpoint = connection.dockerEndpoint ?? ""
         connectionMethod = connection.connectionMethod
         pollingInterval = connection.pollingInterval
         timeout = connection.timeout
@@ -161,10 +163,11 @@ final class ConnectionWindowViewModel {
         password = ""
         supervisorctlPath = "/usr/bin/supervisorctl"
         supervisorConfigPath = ""
-        xmlrpcEndpoint = ""
+        xmlrpcEndpoint = "http://127.0.0.1:9001/RPC2"
         localEndpoint = "http://127.0.0.1:9001/RPC2"
         dockerContainer = ""
-        connectionMethod = .auto
+        dockerEndpoint = ""
+        connectionMethod = .local
         pollingInterval = 5
         timeout = 30
         autoReconnect = true
@@ -186,6 +189,7 @@ final class ConnectionWindowViewModel {
             xmlrpcEndpoint: optionalText(xmlrpcEndpoint),
             localEndpoint: optionalText(localEndpoint),
             dockerContainer: optionalText(dockerContainer),
+            dockerEndpoint: optionalText(dockerEndpoint),
             connectionMethod: connectionMethod,
             pollingInterval: pollingInterval,
             timeout: timeout,
@@ -208,6 +212,7 @@ final class ConnectionWindowViewModel {
         connection.xmlrpcEndpoint = optionalText(xmlrpcEndpoint)
         connection.localEndpoint = optionalText(localEndpoint)
         connection.dockerContainer = optionalText(dockerContainer)
+        connection.dockerEndpoint = optionalText(dockerEndpoint)
         connection.connectionMethod = connectionMethod
         connection.pollingInterval = pollingInterval
         connection.timeout = timeout
@@ -229,6 +234,7 @@ final class ConnectionWindowViewModel {
             xmlrpcEndpoint: optionalText(xmlrpcEndpoint),
             localEndpoint: optionalText(localEndpoint),
             dockerContainer: optionalText(dockerContainer),
+            dockerEndpoint: optionalText(dockerEndpoint),
             timeout: timeout
         )
     }
@@ -246,10 +252,15 @@ final class ConnectionWindowViewModel {
             guard let container = config.dockerContainer, !container.isEmpty else {
                 throw ConnectionError.invalidConfiguration("Docker container name is required")
             }
-            return SupervisorDockerProvider(
+            return try SupervisorDockerProvider(
                 container: container,
                 supervisorctlPath: config.supervisorctlPath,
-                timeout: config.timeout
+                supervisorConfigPath: config.supervisorConfigPath,
+                supervisorEndpoint: config.xmlrpcEndpoint ?? "http://127.0.0.1:9001/RPC2",
+                username: config.username,
+                password: config.password,
+                timeout: config.timeout,
+                dockerEndpoint: config.dockerEndpoint
             )
         case .ssh:
             return SupervisorSSHProvider(
@@ -273,13 +284,12 @@ final class ConnectionWindowViewModel {
                 password: config.password,
                 timeout: config.timeout
             )
-        case .auto:
-            throw ConnectionError.invalidConfiguration("Please select a specific connection method to test")
         }
     }
 
     private func savePassword(for connection: Connection) {
-        guard authenticationMethod == .password, !password.isEmpty else { return }
+        guard !password.isEmpty else { return }
+        guard connectionMethod == .docker || connectionMethod == .xmlrpc || authenticationMethod == .password else { return }
         try? KeychainManager.store(password: password, for: connection.id)
     }
 
