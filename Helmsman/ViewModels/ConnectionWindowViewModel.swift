@@ -60,7 +60,10 @@ final class ConnectionWindowViewModel {
 
         switch connectionMethod {
         case .local:
-            return URL(string: localEndpoint) != nil
+            let hasConfig = !supervisorConfigPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let hasEndpoint = URL(string: localEndpoint) != nil
+                && !(localEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            return hasConfig || hasEndpoint
         case .docker:
             return !host.isEmpty && port > 0 && !dockerContainer.isEmpty && !supervisorctlPath.isEmpty
         case .ssh:
@@ -324,6 +327,8 @@ final class ConnectionWindowViewModel {
         case .local:
             return SupervisorLocalProvider(
                 supervisorctlPath: config.supervisorctlPath,
+                supervisorConfigPath: config.supervisorConfigPath,
+                supervisorEndpoint: config.localEndpoint,
                 timeout: config.timeout
             )
         case .docker:

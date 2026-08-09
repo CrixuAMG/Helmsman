@@ -182,6 +182,16 @@ struct ConnectionFormView: View {
                                 Button("Detect") {
                                     Task { await viewModel.detectSupervisorctlPath() }
                                 }
+
+                                Button("Browse") {
+                                    let panel = NSOpenPanel()
+                                    panel.allowsMultipleSelection = false
+                                    panel.canChooseDirectories = false
+                                    panel.canChooseFiles = true
+                                    if panel.runModal() == .OK, let url = panel.url {
+                                        viewModel.supervisorctlPath = url.path
+                                    }
+                                }
                             }
                         }
                     }
@@ -189,7 +199,7 @@ struct ConnectionFormView: View {
 
                 if viewModel.connectionMethod == .local {
                     FormField(label: "Local XML-RPC URL") {
-                        TextField("http://127.0.0.1:9001/RPC2", text: $viewModel.localEndpoint)
+                        TextField("Optional when using a config file", text: $viewModel.localEndpoint)
                     }
                 }
 
@@ -327,7 +337,9 @@ struct ConnectionFormView: View {
 
         switch viewModel.connectionMethod {
         case .local:
-            return !viewModel.localEndpoint.isEmpty && !viewModel.supervisorctlPath.isEmpty
+            let hasConfig = !viewModel.supervisorConfigPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let hasEndpoint = !viewModel.localEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            return !viewModel.supervisorctlPath.isEmpty && (hasConfig || hasEndpoint)
         case .docker:
             return !viewModel.dockerContainer.isEmpty && !viewModel.xmlrpcEndpoint.isEmpty
         case .ssh:

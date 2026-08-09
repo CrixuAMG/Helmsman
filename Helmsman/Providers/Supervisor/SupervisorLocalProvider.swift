@@ -3,10 +3,19 @@ import Foundation
 
 final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable {
     private let supervisorctlPath: String
+    private let supervisorConfigPath: String?
+    private let supervisorEndpoint: String?
     private let metricsSampler = LocalProcessMetricsSampler()
 
-    init(supervisorctlPath: String = "/usr/bin/supervisorctl", timeout: TimeInterval) {
+    init(
+        supervisorctlPath: String = "/usr/bin/supervisorctl",
+        supervisorConfigPath: String? = nil,
+        supervisorEndpoint: String? = nil,
+        timeout: TimeInterval
+    ) {
         self.supervisorctlPath = supervisorctlPath
+        self.supervisorConfigPath = supervisorConfigPath
+        self.supervisorEndpoint = supervisorEndpoint
     }
 
     nonisolated func getAllProcesses() async throws -> [SupervisorProcess] {
@@ -95,7 +104,18 @@ final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable
         try await withCheckedThrowingContinuation { continuation in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: supervisorctlPath)
-            process.arguments = arguments
+            var commandArguments: [String] = []
+            if let supervisorConfigPath, !supervisorConfigPath.isEmpty {
+                commandArguments += ["-c", supervisorConfigPath]
+            }
+            // A config file may point to a Unix socket. Only override it with
+            // an endpoint when no config file was supplied.
+            if supervisorConfigPath == nil,
+               let supervisorEndpoint,
+               !supervisorEndpoint.isEmpty {
+                commandArguments += ["-s", supervisorEndpoint]
+            }
+            process.arguments = commandArguments + arguments
 
             let outputPipe = Pipe()
             let errorPipe = Pipe()
@@ -119,7 +139,10 @@ final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable
             do {
                 try process.run()
             } catch {
-                continuation.resume(throwing: error)
+                let path = supervisorctlPath
+                continuation.resume(throwing: ProviderError.commandFailed(
+                    "Unable to start supervisorctl at '\(path)'. Check the path and grant Helmsman access to the executable. Under macOS App Sandbox, use the Browse button to select it."
+                ))
             }
         }
     }
