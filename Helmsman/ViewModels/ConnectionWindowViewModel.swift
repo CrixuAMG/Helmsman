@@ -25,6 +25,7 @@ final class ConnectionWindowViewModel {
     var timeout: TimeInterval = 30
     var autoReconnect = true
     var safeMode = true
+    var touchIDProtected = false
     var notes = ""
 
     var isTesting = false
@@ -189,6 +190,7 @@ final class ConnectionWindowViewModel {
         timeout = connection.timeout
         autoReconnect = connection.autoReconnect
         safeMode = connection.safeMode
+        touchIDProtected = connection.touchIDProtected
         notes = connection.notes ?? ""
     }
 
@@ -211,6 +213,7 @@ final class ConnectionWindowViewModel {
         timeout = 30
         autoReconnect = true
         safeMode = true
+        touchIDProtected = false
         notes = ""
     }
 
@@ -233,6 +236,7 @@ final class ConnectionWindowViewModel {
             timeout: timeout,
             autoReconnect: autoReconnect,
             safeMode: safeMode,
+            touchIDProtected: touchIDProtected,
             notes: optionalText(notes)
         )
     }
@@ -255,6 +259,7 @@ final class ConnectionWindowViewModel {
         connection.timeout = timeout
         connection.autoReconnect = autoReconnect
         connection.safeMode = safeMode
+        connection.touchIDProtected = touchIDProtected
         connection.notes = optionalText(notes)
     }
 

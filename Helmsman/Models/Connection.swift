@@ -25,6 +25,8 @@ final class Connection {
     var notes: String?
     var dependencyEdgesData: Data = Data()
     var favoriteServiceIDsData: Data = Data()
+    var productionServiceIDsData: Data = Data()
+    var touchIDProtected: Bool = false
     var createdAt: Date
     var updatedAt: Date
 
@@ -83,6 +85,29 @@ final class Connection {
         favoriteServiceIDs = favorites
     }
 
+    var productionServiceIDs: Set<String> {
+        get {
+            (try? JSONDecoder().decode(Set<String>.self, from: productionServiceIDsData)) ?? []
+        }
+        set {
+            productionServiceIDsData = (try? JSONEncoder().encode(newValue)) ?? Data()
+        }
+    }
+
+    func isProductionService(_ serviceID: String) -> Bool {
+        productionServiceIDs.contains(serviceID)
+    }
+
+    func toggleProduction(serviceID: String) {
+        var production = productionServiceIDs
+        if production.contains(serviceID) {
+            production.remove(serviceID)
+        } else {
+            production.insert(serviceID)
+        }
+        productionServiceIDs = production
+    }
+
     init(
         name: String,
         accentColorHex: String = "#007AFF",
@@ -101,6 +126,7 @@ final class Connection {
         timeout: TimeInterval = 30,
         autoReconnect: Bool = true,
         safeMode: Bool = true,
+        touchIDProtected: Bool = false,
         notes: String? = nil
     ) {
         self.id = UUID()
@@ -121,6 +147,7 @@ final class Connection {
         self.timeout = timeout
         self.autoReconnect = autoReconnect
         self.safeMode = safeMode
+        self.touchIDProtected = touchIDProtected
         self.notes = notes
         self.createdAt = Date()
         self.updatedAt = Date()

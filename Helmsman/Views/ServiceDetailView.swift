@@ -8,7 +8,9 @@ struct ServiceDetailView: View {
     let memoryDisplayUnit: MemoryDisplayUnit
     let isPerformingAction: Bool
     let isFavorite: Bool
+    let isProduction: Bool
     let onToggleFavorite: () -> Void
+    let onToggleProduction: () -> Void
     let onStart: () -> Void
     let onStop: () -> Void
     let onRestart: () -> Void
@@ -86,6 +88,15 @@ struct ServiceDetailView: View {
                         Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
                     }
                     .help(isFavorite ? "Remove from favorites" : "Add to favorites")
+
+                    Button(action: onToggleProduction) {
+                        Label(
+                            isProduction ? "Production" : "Mark Production",
+                            systemImage: isProduction ? "shield.lefthalf.filled" : "shield"
+                        )
+                    }
+                    .help(isProduction ? "Remove production mark" : "Mark as production service")
+                    .tint(isProduction ? .orange : .accentColor)
 
                     Button(action: onStart) {
                         Label("Start", systemImage: "play.fill")

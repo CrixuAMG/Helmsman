@@ -16,7 +16,7 @@ final class MainWindowViewModel {
     var safeModeAlert: SafeModeAlert?
     var errorAlert: ErrorAlert?
 
-    var onFavoriteDidChange: (() -> Void)?
+    var onConnectionDidChange: (() -> Void)?
 
     private let connection: Connection
     private let serviceManager: ServiceManager
@@ -63,7 +63,16 @@ final class MainWindowViewModel {
 
     func toggleFavorite(for serviceID: String) {
         connection.toggleFavorite(serviceID: serviceID)
-        onFavoriteDidChange?()
+        onConnectionDidChange?()
+    }
+
+    func isProduction(_ serviceID: String) -> Bool {
+        connection.isProductionService(serviceID)
+    }
+
+    func toggleProduction(for serviceID: String) {
+        connection.toggleProduction(serviceID: serviceID)
+        onConnectionDidChange?()
     }
 
     var selectedServiceID: String? {
@@ -200,6 +209,20 @@ final class MainWindowViewModel {
     func stop(_ service: Service) {
         guard !isPerformingAction(for: service) else { return }
 
+        if connection.touchIDProtected && connection.isProductionService(service.id) {
+            Task {
+                let authorized = await BiometricAuthenticator.authenticate(
+                    reason: "Unlock to stop production service '\(service.name)'."
+                )
+                guard authorized else { return }
+                presentStopConfirmation(for: service)
+            }
+        } else {
+            presentStopConfirmation(for: service)
+        }
+    }
+
+    private func presentStopConfirmation(for service: Service) {
         if connection.safeMode {
             safeModeAlert = SafeModeAlert(
                 title: "Stop Service",
@@ -308,16 +331,32 @@ final class MainWindowViewModel {
 
     func bulkStop() {
         guard !selectedServices.isEmpty else { return }
+        let services = selectedServices
+
+        if connection.touchIDProtected && services.contains(where: { connection.isProductionService($0.id) }) {
+            Task {
+                let authorized = await BiometricAuthenticator.authenticate(
+                    reason: "Unlock to stop \(services.count) selected service(s), including production services."
+                )
+                guard authorized else { return }
+                presentBulkStopConfirmation(services: services)
+            }
+        } else {
+            presentBulkStopConfirmation(services: services)
+        }
+    }
+
+    private func presentBulkStopConfirmation(services: [Service]) {
         if connection.safeMode {
             safeModeAlert = SafeModeAlert(
-                title: "Stop \(selectedServices.count) Services",
+                title: "Stop \(services.count) Services",
                 message: bulkConfirmationMessage(action: "stop"),
                 action: { [weak self] in
-                    await self?.performBulk(.stop, services: self?.selectedServices ?? [])
+                    await self?.performBulk(.stop, services: services)
                 }
             )
         } else {
-            Task { await performBulk(.stop, services: selectedServices) }
+            Task { await performBulk(.stop, services: services) }
         }
     }
 
@@ -340,6 +379,22 @@ final class MainWindowViewModel {
         let services = preset.matchingServices(in: services)
         guard !services.isEmpty else { return }
 
+        if preset.action == .stop,
+           connection.touchIDProtected,
+           services.contains(where: { connection.isProductionService($0.id) }) {
+            Task {
+                let authorized = await BiometricAuthenticator.authenticate(
+                    reason: "Unlock to stop \(services.count) service(s), including production services."
+                )
+                guard authorized else { return }
+                presentPresetConfirmation(preset, services: services)
+            }
+        } else {
+            presentPresetConfirmation(preset, services: services)
+        }
+    }
+
+    private func presentPresetConfirmation(_ preset: BulkPreset, services: [Service]) {
         if connection.safeMode {
             safeModeAlert = SafeModeAlert(
                 title: "\(preset.action.displayName.uppercased()): \(preset.title)",

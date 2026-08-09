@@ -43,6 +43,7 @@ final class ConnectionManager {
             timeout: connection.timeout,
             autoReconnect: connection.autoReconnect,
             safeMode: connection.safeMode,
+            touchIDProtected: connection.touchIDProtected,
             notes: connection.notes
         )
         modelContext.insert(copy)

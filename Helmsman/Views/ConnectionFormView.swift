@@ -229,6 +229,8 @@ struct ConnectionFormView: View {
 
             Toggle("Auto Reconnect", isOn: $viewModel.autoReconnect)
             Toggle("Safe Mode", isOn: $viewModel.safeMode)
+            Toggle("Touch ID for Production Stops", isOn: $viewModel.touchIDProtected)
+                .help("Require Touch ID before stopping services marked as production.")
         }
     }
 

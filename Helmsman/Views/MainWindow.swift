@@ -41,7 +41,7 @@ struct MainWindow: View {
         }
 
         .task {
-            viewModel.onFavoriteDidChange = {
+            viewModel.onConnectionDidChange = {
                 try? modelContext.save()
             }
             await viewModel.refresh()
@@ -125,7 +125,9 @@ struct MainWindow: View {
                 memoryDisplayUnit: AppSettings.shared.memoryDisplayUnit,
                 isPerformingAction: viewModel.isPerformingAction(for: service),
                 isFavorite: viewModel.isFavorite(service.id),
+                isProduction: viewModel.isProduction(service.id),
                 onToggleFavorite: { viewModel.toggleFavorite(for: service.id) },
+                onToggleProduction: { viewModel.toggleProduction(for: service.id) },
                 onStart: { viewModel.start(service) },
                 onStop: { viewModel.stop(service) },
                 onRestart: { viewModel.restart(service) },
