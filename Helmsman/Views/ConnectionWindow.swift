@@ -124,6 +124,7 @@ struct ConnectionWindow: View {
             .font(.body)
 
             diskUsageSection(connection)
+                .padding(.horizontal, 16)
 
             HStack(spacing: 12) {
                 Button("Edit") {

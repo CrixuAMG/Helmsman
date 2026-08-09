@@ -4,18 +4,17 @@ import SwiftData
 struct MainWindow: View {
     let connection: Connection
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
     @State private var viewModel: MainWindowViewModel
     @State private var activeAlert: ActiveAlert?
     @State private var showGraphSheet = false
 
     enum ActiveAlert: Identifiable {
         case safeMode(SafeModeAlert)
-        case error(ErrorAlert)
 
         var id: UUID {
             switch self {
             case .safeMode(let alert): return alert.id
-            case .error(let alert): return alert.id
             }
         }
     }
@@ -61,13 +60,6 @@ struct MainWindow: View {
                 activeAlert = nil
             }
         }
-        .onChange(of: viewModel.errorAlert?.id) { _, newID in
-            if let alert = viewModel.errorAlert, newID != nil {
-                activeAlert = .error(alert)
-            } else if case .error = activeAlert {
-                activeAlert = nil
-            }
-        }
         .alert(item: $activeAlert) { alert in
             switch alert {
             case .safeMode(let safeModeAlert):
@@ -82,31 +74,37 @@ struct MainWindow: View {
                         viewModel.safeModeAlert = nil
                     }
                 )
-            case .error(let errorAlert):
-                if let onReconnect = errorAlert.onReconnect {
-                    return Alert(
-                        title: Text(errorAlert.title),
-                        message: Text(errorAlert.message + (errorAlert.retryCount > 0 ? "\n\nRetry attempt \(errorAlert.retryCount) of 3" : "")),
-                        primaryButton: .default(Text("Retry")) {
-                            viewModel.errorAlert = nil
-                            Task { await errorAlert.onRetry() }
-                        },
-                        secondaryButton: .default(Text("Reconnect")) {
-                            viewModel.errorAlert = nil
-                            Task { await onReconnect() }
-                        }
-                    )
-                } else {
-                    return Alert(
-                        title: Text(errorAlert.title),
-                        message: Text(errorAlert.message),
-                        dismissButton: .default(Text("OK")) {
-                            viewModel.errorAlert = nil
-                            Task { await errorAlert.onRetry() }
-                        }
-                    )
+            }
+        }
+        .alert(
+            Text(viewModel.errorAlert?.title ?? "Connection Error"),
+            isPresented: Binding(
+                get: { viewModel.errorAlert != nil },
+                set: { if !$0 { viewModel.errorAlert = nil } }
+            ),
+            presenting: viewModel.errorAlert
+        ) { alert in
+            if let onReconnect = alert.onReconnect {
+                Button("Retry") {
+                    viewModel.errorAlert = nil
+                    Task { await alert.onRetry() }
+                }
+                Button("Reconnect") {
+                    viewModel.errorAlert = nil
+                    Task { await onReconnect() }
+                }
+                Button("Cancel", role: .cancel) {
+                    viewModel.errorAlert = nil
+                    openWindow(id: "connections")
+                }
+            } else {
+                Button("OK") {
+                    viewModel.errorAlert = nil
+                    Task { await alert.onRetry() }
                 }
             }
+        } message: { alert in
+            Text(alert.message + (alert.retryCount > 0 ? "\n\nRetry attempt \(alert.retryCount) of 3" : ""))
         }
         .sheet(isPresented: $showGraphSheet) {
             DependencyGraphSheetView(
