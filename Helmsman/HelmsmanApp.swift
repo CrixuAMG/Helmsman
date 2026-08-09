@@ -5,6 +5,7 @@ import SwiftData
 struct HelmsmanApp: App {
     @StateObject private var settings = AppSettings.shared
     @State private var showOnboarding = false
+    @State private var statusMonitor = ConnectionStatusMonitor()
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -21,7 +22,7 @@ struct HelmsmanApp: App {
 
     var body: some Scene {
         WindowGroup("Connections", id: "connections") {
-            ConnectionWindow()
+            ConnectionWindow(monitor: statusMonitor)
                 .frame(minWidth: 800, minHeight: 560)
                 .preferredColorScheme(settings.theme.colorScheme)
                 .overlay {
@@ -54,6 +55,19 @@ struct HelmsmanApp: App {
         .commands {
             HelmsmanCommands()
         }
+
+        MenuBarExtra {
+            MenuBarView(monitor: statusMonitor)
+        } label: {
+            Label {
+                Text("Helmsman")
+            } icon: {
+                Image(systemName: statusMonitor.isHealthy
+                      ? "checkmark.seal"
+                      : (statusMonitor.totalAttention > 0 ? "exclamationmark.triangle" : "xmark.seal"))
+            }
+        }
+        .modelContainer(sharedModelContainer)
     }
 }
 

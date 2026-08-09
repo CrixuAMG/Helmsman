@@ -7,6 +7,11 @@ struct ConnectionWindow: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Connection.name) private var connections: [Connection]
     @State private var viewModel = ConnectionWindowViewModel()
+    @Bindable private var monitor: ConnectionStatusMonitor
+
+    init(monitor: ConnectionStatusMonitor) {
+        self.monitor = monitor
+    }
 
     var body: some View {
         HSplitView {
@@ -23,6 +28,9 @@ struct ConnectionWindow: View {
         }
         .onChange(of: connections) { _, newConnections in
             viewModel.loadConnections(newConnections)
+        }
+        .task {
+            monitor.start(connections: connections)
         }
     }
 
