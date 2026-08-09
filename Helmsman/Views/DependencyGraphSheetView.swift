@@ -10,6 +10,7 @@ struct DependencyGraphSheetView: View {
 
     @State private var isEditing = false
     @State private var pendingSource: String?
+    @State private var highlightedTag: String?
 
     private var graph: DependencyGraph {
         DependencyGraph.build(
@@ -34,6 +35,7 @@ struct DependencyGraphSheetView: View {
                     isEditing: isEditing,
                     pendingSource: pendingSource,
                     selectedNodeID: pendingSource ?? (viewModel.selectedServiceIDs.count == 1 ? viewModel.selectedServiceIDs.first : nil),
+                    highlightedNodeIDs: highlightedNodeIDs,
                     onSelectNode: { nodeID in
                         if let service = viewModel.services.first(where: { $0.controlName == nodeID }) {
                             viewModel.selectedServiceIDs = [service.id]
@@ -64,6 +66,22 @@ struct DependencyGraphSheetView: View {
 
             Spacer()
 
+            Menu {
+                Button("None") { highlightedTag = nil }
+                if !connection.tagNames.isEmpty {
+                    Divider()
+                    ForEach(connection.tagNames, id: \.self) { tag in
+                        Button {
+                            highlightedTag = tag
+                        } label: {
+                            Label(tag, systemImage: highlightedTag == tag ? "checkmark" : "tag")
+                        }
+                    }
+                }
+            } label: {
+                Label(highlightedTag.map { "Highlight: \($0)" } ?? "Highlight Tag", systemImage: "tag")
+            }
+
             if isEditing {
                 Text(pendingSource == nil
                      ? "Select the service that depends on another"
@@ -82,6 +100,12 @@ struct DependencyGraphSheetView: View {
             }
             .keyboardShortcut(.cancelAction)
         }
+    }
+
+    private var highlightedNodeIDs: Set<String> {
+        guard let highlightedTag else { return [] }
+        let taggedIDs = connection.processTags[highlightedTag] ?? []
+        return Set(viewModel.services.filter { taggedIDs.contains($0.id) }.map(\.controlName))
     }
 
     private var emptyState: some View {

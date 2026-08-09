@@ -75,6 +75,61 @@ final class MainWindowViewModel {
         onConnectionDidChange?()
     }
 
+    var tagNames: [String] {
+        connection.tagNames
+    }
+
+    func tags(for serviceID: String) -> [String] {
+        connection.tagNames.filter { connection.processTags[$0]?.contains(serviceID) == true }
+    }
+
+    func addTag(_ name: String) {
+        connection.addTag(name)
+        onConnectionDidChange?()
+    }
+
+    func removeTag(_ name: String) {
+        connection.removeTag(name)
+        onConnectionDidChange?()
+    }
+
+    func toggleTag(_ tag: String, for serviceID: String) {
+        connection.toggleTag(tag, serviceID: serviceID)
+        onConnectionDidChange?()
+    }
+
+    func services(for tag: String) -> [Service] {
+        let ids = connection.processTags[tag] ?? []
+        return services.filter { ids.contains($0.id) }
+    }
+
+    func performTag(_ tag: String, action: BulkServiceAction) {
+        let taggedServices = services(for: tag)
+        guard !taggedServices.isEmpty else { return }
+        let actionableServices: [Service]
+        switch action {
+        case .start:
+            actionableServices = taggedServices.filter { $0.status != .running }
+        case .stop, .restart:
+            actionableServices = taggedServices.filter { $0.status == .running }
+        }
+        guard !actionableServices.isEmpty else { return }
+
+        if action == .stop,
+           connection.touchIDProtected,
+           actionableServices.contains(where: { connection.isProductionService($0.id) }) {
+            Task {
+                let authorized = await BiometricAuthenticator.authenticate(
+                    reason: "Unlock to stop the '\(tag)' tag."
+                )
+                guard authorized else { return }
+                presentTagConfirmation(tag, action: action, services: actionableServices)
+            }
+        } else {
+            presentTagConfirmation(tag, action: action, services: actionableServices)
+        }
+    }
+
     var selectedServiceID: String? {
         selectedServiceIDs.count == 1 ? selectedServiceIDs.first : nil
     }
@@ -407,6 +462,20 @@ final class MainWindowViewModel {
             )
         } else {
             Task { await performBulk(preset.action, services: services) }
+        }
+    }
+
+    private func presentTagConfirmation(_ tag: String, action: BulkServiceAction, services: [Service]) {
+        if connection.safeMode {
+            safeModeAlert = SafeModeAlert(
+                title: "\(action.displayName.uppercased()): \(tag)",
+                message: "This will \(action.verb) \(services.count) service(s) in the '\(tag)' tag:\n\n\(services.map(\.name).joined(separator: "\n"))",
+                action: { [weak self] in
+                    await self?.performBulk(action, services: services)
+                }
+            )
+        } else {
+            Task { await performBulk(action, services: services) }
         }
     }
 

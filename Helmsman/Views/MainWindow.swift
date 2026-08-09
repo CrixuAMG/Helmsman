@@ -8,6 +8,7 @@ struct MainWindow: View {
     @State private var viewModel: MainWindowViewModel
     @State private var activeAlert: ActiveAlert?
     @State private var showGraphSheet = false
+    @State private var showTagsSheet = false
 
     enum ActiveAlert: Identifiable {
         case safeMode(SafeModeAlert)
@@ -111,6 +112,9 @@ struct MainWindow: View {
                 viewModel: viewModel,
                 connection: connection
             )
+        }
+        .sheet(isPresented: $showTagsSheet) {
+            ProcessTagsSheetView(viewModel: viewModel)
         }
     }
 
@@ -324,20 +328,39 @@ struct MainWindow: View {
 
         ToolbarItem(placement: .primaryAction) {
             Menu {
-                ForEach(BulkPreset.allCases) { preset in
-                    Button {
-                        viewModel.performPreset(preset)
-                    } label: {
-                        Label(preset.title, systemImage: preset.systemImage)
+                if viewModel.tagNames.isEmpty {
+                    Text("No process tags configured")
+                } else {
+                    ForEach(viewModel.tagNames, id: \.self) { tag in
+                        Menu {
+                            Button {
+                                viewModel.performTag(tag, action: .start)
+                            } label: {
+                                Label("Start", systemImage: BulkServiceAction.start.systemImage)
+                            }
+                            Button {
+                                viewModel.performTag(tag, action: .stop)
+                            } label: {
+                                Label("Stop", systemImage: BulkServiceAction.stop.systemImage)
+                            }
+                            Button {
+                                viewModel.performTag(tag, action: .restart)
+                            } label: {
+                                Label("Restart", systemImage: BulkServiceAction.restart.systemImage)
+                            }
+                        } label: {
+                            Label(tag, systemImage: "tag.fill")
+                        }
                     }
                 }
 
                 Divider()
 
-                Button("Clear Selection") {
-                    viewModel.selectedServiceIDs = []
+                Button {
+                    showTagsSheet = true
+                } label: {
+                    Label("Manage Process Tags...", systemImage: "tag")
                 }
-                .disabled(viewModel.selectedServiceIDs.isEmpty)
             } label: {
                 Label("Bulk Actions", systemImage: "square.stack.3d.up")
             }

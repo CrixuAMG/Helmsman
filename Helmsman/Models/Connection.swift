@@ -27,6 +27,7 @@ final class Connection {
     var dependencyEdgesData: Data = Data()
     var favoriteServiceIDsData: Data = Data()
     var productionServiceIDsData: Data = Data()
+    var processTagsData: Data = Data()
     var touchIDProtected: Bool = false
     var autoClearOldLogs: Bool = false
     var logRetentionDays: Int = 30
@@ -109,6 +110,47 @@ final class Connection {
             production.insert(serviceID)
         }
         productionServiceIDs = production
+    }
+
+    var processTags: [String: Set<String>] {
+        get {
+            (try? JSONDecoder().decode([String: Set<String>].self, from: processTagsData)) ?? [:]
+        }
+        set {
+            processTagsData = (try? JSONEncoder().encode(newValue)) ?? Data()
+        }
+    }
+
+    var tagNames: [String] {
+        processTags.keys.sorted {
+            $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+        }
+    }
+
+    func addTag(_ name: String) {
+        let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return }
+        var tags = processTags
+        tags[normalized, default: []] = tags[normalized, default: []]
+        processTags = tags
+    }
+
+    func removeTag(_ name: String) {
+        var tags = processTags
+        tags.removeValue(forKey: name)
+        processTags = tags
+    }
+
+    func toggleTag(_ name: String, serviceID: String) {
+        var tags = processTags
+        var serviceIDs = tags[name, default: []]
+        if serviceIDs.contains(serviceID) {
+            serviceIDs.remove(serviceID)
+        } else {
+            serviceIDs.insert(serviceID)
+        }
+        tags[name] = serviceIDs
+        processTags = tags
     }
 
     init(

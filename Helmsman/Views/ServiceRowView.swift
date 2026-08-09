@@ -5,6 +5,7 @@ struct ServiceRowView: View {
     let isPerformingAction: Bool
     let isFavorite: Bool
     let isProduction: Bool
+    let tags: [String]
     let onToggleFavorite: () -> Void
     let onStart: () -> Void
     let onStop: () -> Void
@@ -34,6 +35,24 @@ struct ServiceRowView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                }
+
+                if !tags.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(tags.prefix(3), id: \.self) { tag in
+                            Text(tag)
+                                .font(.system(size: 9, weight: .medium))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color.accentColor.opacity(0.14)))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        if tags.count > 3 {
+                            Text("+\(tags.count - 3)")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
 

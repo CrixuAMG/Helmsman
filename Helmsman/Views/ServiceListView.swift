@@ -26,6 +26,7 @@ struct ServiceListView: View {
                         isPerformingAction: viewModel.isPerformingAction(for: service),
                         isFavorite: viewModel.isFavorite(service.id),
                         isProduction: viewModel.isProduction(service.id),
+                        tags: viewModel.tags(for: service.id),
                         onToggleFavorite: { viewModel.toggleFavorite(for: service.id) },
                         onStart: { viewModel.start(service) },
                         onStop: { viewModel.stop(service) },

@@ -5,6 +5,7 @@ struct DependencyGraphView: View {
     let isEditing: Bool
     let pendingSource: String?
     let selectedNodeID: String?
+    let highlightedNodeIDs: Set<String>
     let onSelectNode: (String) -> Void
     let onToggleEdge: (String, String) -> Void
 
@@ -76,13 +77,18 @@ struct DependencyGraphView: View {
 
             let isSelected = node.id == selectedNodeID
             let isPending = isEditing && node.id == pendingSource
+            let isHighlighted = highlightedNodeIDs.contains(node.id)
 
-            let fill = statusColor(node.status).opacity(isSelected ? 0.28 : 0.14)
-            let border = isPending ? Color.blue : (isSelected ? Color.accentColor : statusColor(node.status).opacity(0.6))
+            let fill = isHighlighted
+                ? Color.purple.opacity(0.28)
+                : statusColor(node.status).opacity(isSelected ? 0.28 : 0.14)
+            let border = isPending
+                ? Color.blue
+                : (isHighlighted ? Color.purple : (isSelected ? Color.accentColor : statusColor(node.status).opacity(0.6)))
 
             let rounded = RoundedRectangle(cornerRadius: 8, style: .continuous)
             context.fill(rounded.path(in: frame), with: .color(fill))
-            context.stroke(rounded.path(in: frame), with: .color(border), lineWidth: isSelected || isPending ? 2 : 1)
+            context.stroke(rounded.path(in: frame), with: .color(border), lineWidth: isSelected || isPending || isHighlighted ? 2 : 1)
 
             let label = Text(node.name)
                 .font(.caption)
