@@ -36,9 +36,22 @@ final class SupervisorXMLRPCProvider: ServiceManagerProvider, @unchecked Sendabl
         try await startProcess(name)
     }
 
+    nonisolated func readProcessLog(_ name: String, stderr: Bool, offset: Int, maxBytes: Int) async throws -> ProcessLogChunk {
+        let method = stderr ? "supervisor.readProcessStderrLog" : "supervisor.readProcessStdoutLog"
+        let response = try await callMethod(method, params: [.string(name), .int(offset), .int(maxBytes)], trimStrings: false)
+        guard case .string(let content) = response else {
+            throw ServiceError.actionFailed("Unexpected log response")
+        }
+        return ProcessLogChunk(content: content, nextOffset: offset + content.count)
+    }
+
+    nonisolated func clearProcessLogs(_ name: String) async throws {
+        _ = try await callMethod("supervisor.clearProcessLogs", params: [.string(name)])
+    }
+
     // MARK: - XML-RPC Call
 
-    private nonisolated func callMethod(_ method: String, params: [XMLRPCValue]) async throws -> XMLRPCValue {
+    private nonisolated func callMethod(_ method: String, params: [XMLRPCValue], trimStrings: Bool = true) async throws -> XMLRPCValue {
         let requestXML = buildRequest(method: method, params: params)
 
         var request = URLRequest(url: endpoint)
@@ -72,7 +85,7 @@ final class SupervisorXMLRPCProvider: ServiceManagerProvider, @unchecked Sendabl
             throw ServiceError.actionFailed("Invalid response encoding")
         }
 
-        return try parseResponse(xmlString)
+        return try parseResponse(xmlString, trimStrings: trimStrings)
     }
 
     // MARK: - Request Building
@@ -99,8 +112,8 @@ final class SupervisorXMLRPCProvider: ServiceManagerProvider, @unchecked Sendabl
 
     // MARK: - Response Parsing
 
-    private nonisolated func parseResponse(_ xml: String) throws -> XMLRPCValue {
-        let parser = XMLRPCResponseParser(xml: xml)
+    private nonisolated func parseResponse(_ xml: String, trimStrings: Bool = true) throws -> XMLRPCValue {
+        let parser = XMLRPCResponseParser(xml: xml, trimStrings: trimStrings)
         return try parser.parse()
     }
 

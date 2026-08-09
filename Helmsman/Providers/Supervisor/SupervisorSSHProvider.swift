@@ -84,6 +84,50 @@ final class SupervisorSSHProvider: ServiceManagerProvider, @unchecked Sendable {
         return ProcessMetrics(timestamp: Date(), cpuPercent: cpu, memoryMB: rssKB / 1024.0)
     }
 
+    nonisolated func readProcessLog(_ name: String, stderr: Bool, offset: Int, maxBytes: Int) async throws -> ProcessLogChunk {
+        let quoted = Self.quote(name)
+        let variants: [String]
+        if stderr {
+            variants = [
+                "\(supervisorctlPath) tail -\(maxBytes) \(quoted) stderr",
+                "\(supervisorctlPath) tail --stderr \(quoted)",
+                "\(supervisorctlPath) tail \(quoted) stderr",
+            ]
+        } else {
+            variants = [
+                "\(supervisorctlPath) tail -\(maxBytes) \(quoted)",
+                "\(supervisorctlPath) tail \(quoted)",
+            ]
+        }
+
+        var lastError: Error?
+        for command in variants {
+            do {
+                let output = try await executeSSH(command)
+                let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.hasPrefix("Error") || trimmed.hasPrefix("ERROR") || trimmed.hasPrefix("error:") {
+                    lastError = ProviderError.commandFailed(output)
+                    continue
+                }
+                return ProcessLogChunk(content: output, nextOffset: -1)
+            } catch {
+                lastError = error
+            }
+        }
+        throw lastError ?? ProviderError.commandFailed("Unable to tail log for '\(name)'")
+    }
+
+    nonisolated func clearProcessLogs(_ name: String) async throws {
+        let output = try await executeSSH("\(supervisorctlPath) clear \(Self.quote(name))")
+        if output.contains("ERROR") {
+            throw ProviderError.commandFailed(output)
+        }
+    }
+
+    private nonisolated static func quote(_ value: String) -> String {
+        value.contains(" ") ? "'\(value)'" : value
+    }
+
     private nonisolated func executeSSH(_ command: String) async throws -> String {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 

@@ -40,9 +40,13 @@ struct MainWindow: View {
         .task {
             await viewModel.refresh()
             viewModel.startPolling()
+            viewModel.startLogPolling(for: viewModel.selectedServiceID)
         }
         .onDisappear {
             viewModel.stopPolling()
+        }
+        .onChange(of: viewModel.selectedServiceID) { _, newValue in
+            viewModel.startLogPolling(for: newValue)
         }
         .onChange(of: viewModel.safeModeAlert?.id) { _, newID in
             if let alert = viewModel.safeModeAlert, newID != nil {
@@ -103,11 +107,15 @@ struct MainWindow: View {
             ServiceDetailView(
                 service: service,
                 metricsStore: viewModel.metricsStore,
+                logStore: viewModel.logStore,
                 memoryDisplayUnit: AppSettings.shared.memoryDisplayUnit,
                 isPerformingAction: viewModel.isPerformingAction(for: service),
                 onStart: { viewModel.start(service) },
                 onStop: { viewModel.stop(service) },
-                onRestart: { viewModel.restart(service) }
+                onRestart: { viewModel.restart(service) },
+                onClearLogs: {
+                    Task { await viewModel.clearLogs(for: service) }
+                }
             )
 
         } else {

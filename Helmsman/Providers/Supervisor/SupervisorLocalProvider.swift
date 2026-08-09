@@ -39,6 +39,58 @@ final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable
         try await metricsSampler.sample(pid: pid)
     }
 
+    nonisolated func readProcessLog(_ name: String, stderr: Bool, offset: Int, maxBytes: Int) async throws -> ProcessLogChunk {
+        let output = try await runTail(name: name, stderr: stderr, maxBytes: maxBytes)
+        return ProcessLogChunk(content: output, nextOffset: -1)
+    }
+
+    nonisolated func clearProcessLogs(_ name: String) async throws {
+        let output = try await runSupervisorctl(["clear", name])
+        if output.contains("ERROR") {
+            throw ProviderError.commandFailed(output)
+        }
+    }
+
+    /// `supervisorctl tail` syntax differs between supervisor versions:
+    /// - 3.x: `tail [-N bytes] name [stdout|stderr]`
+    /// - 4.x: `tail [-n lines] [--stderr] name`
+    private nonisolated func runTail(name: String, stderr: Bool, maxBytes: Int) async throws -> String {
+        let variants: [[String]]
+        if stderr {
+            variants = [
+                ["tail", "-\(maxBytes)", name, "stderr"],
+                ["tail", "--stderr", name],
+                ["tail", name, "stderr"],
+            ]
+        } else {
+            variants = [
+                ["tail", "-\(maxBytes)", name],
+                ["tail", name],
+            ]
+        }
+
+        var lastError: Error?
+        for variant in variants {
+            do {
+                let output = try await runSupervisorctl(variant)
+                if Self.isTailError(output) {
+                    lastError = ProviderError.commandFailed(output)
+                    continue
+                }
+                return output
+            } catch {
+                lastError = error
+            }
+        }
+        throw lastError ?? ProviderError.commandFailed("Unable to tail log for '\(name)'")
+    }
+
+    private nonisolated static func isTailError(_ output: String) -> Bool {
+        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        return trimmed.hasPrefix("Error") || trimmed.hasPrefix("ERROR") || trimmed.hasPrefix("error:")
+    }
+
     private nonisolated func runSupervisorctl(_ arguments: [String]) async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
             let process = Process()

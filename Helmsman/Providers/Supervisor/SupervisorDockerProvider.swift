@@ -57,6 +57,45 @@ final class SupervisorDockerProvider: ServiceManagerProvider, @unchecked Sendabl
         return ProcessMetrics(timestamp: Date(), cpuPercent: cpu, memoryMB: rssKB / 1024.0)
     }
 
+    nonisolated func readProcessLog(_ name: String, stderr: Bool, offset: Int, maxBytes: Int) async throws -> ProcessLogChunk {
+        let variants: [[String]]
+        if stderr {
+            variants = [
+                [supervisorctlPath, "tail", "-\(maxBytes)", name, "stderr"],
+                [supervisorctlPath, "tail", "--stderr", name],
+                [supervisorctlPath, "tail", name, "stderr"],
+            ]
+        } else {
+            variants = [
+                [supervisorctlPath, "tail", "-\(maxBytes)", name],
+                [supervisorctlPath, "tail", name],
+            ]
+        }
+
+        var lastError: Error?
+        for variant in variants {
+            do {
+                let output = try await execInContainer(variant)
+                let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.hasPrefix("Error") || trimmed.hasPrefix("ERROR") || trimmed.hasPrefix("error:") {
+                    lastError = ProviderError.commandFailed(output)
+                    continue
+                }
+                return ProcessLogChunk(content: output, nextOffset: -1)
+            } catch {
+                lastError = error
+            }
+        }
+        throw lastError ?? ProviderError.commandFailed("Unable to tail log for '\(name)'")
+    }
+
+    nonisolated func clearProcessLogs(_ name: String) async throws {
+        let output = try await execInContainer([supervisorctlPath, "clear", name])
+        if output.contains("ERROR") {
+            throw ProviderError.commandFailed(output)
+        }
+    }
+
     private nonisolated func execInContainer(_ command: [String]) async throws -> String {
         let escapedCmd = command.map { arg in
             arg.contains(" ") ? "'\(arg)'" : arg

@@ -2,6 +2,7 @@ import Foundation
 
 final class XMLRPCResponseParser: NSObject, @unchecked Sendable, XMLParserDelegate {
     private let xml: String
+    private let trimStrings: Bool
     nonisolated(unsafe) private var result: XMLRPCValue?
     nonisolated(unsafe) private var error: Error?
 
@@ -13,8 +14,9 @@ final class XMLRPCResponseParser: NSObject, @unchecked Sendable, XMLParserDelega
     nonisolated(unsafe) private var inFault = false
     nonisolated(unsafe) private var faultString: String = ""
 
-    nonisolated init(xml: String) {
+    nonisolated init(xml: String, trimStrings: Bool = true) {
         self.xml = xml
+        self.trimStrings = trimStrings
     }
 
     nonisolated func parse() throws -> XMLRPCValue {
@@ -62,22 +64,27 @@ final class XMLRPCResponseParser: NSObject, @unchecked Sendable, XMLParserDelega
     }
 
     nonisolated func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
-        let trimmed = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value: String
+        if trimStrings {
+            value = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            value = currentText
+        }
 
         switch elementName {
         case "name":
-            nameStack.append(trimmed)
+            nameStack.append(value)
 
         case "string":
-            pushValue(.string(trimmed))
+            pushValue(.string(value))
 
         case "int", "i4", "i8":
-            if let intVal = Int(trimmed) {
+            if let intVal = Int(value) {
                 pushValue(.int(intVal))
             }
 
         case "boolean":
-            pushValue(.bool(trimmed == "1" || trimmed.lowercased() == "true"))
+            pushValue(.bool(value == "1" || value.lowercased() == "true"))
 
         case "member":
             if let name = nameStack.popLast(),
@@ -97,8 +104,8 @@ final class XMLRPCResponseParser: NSObject, @unchecked Sendable, XMLParserDelega
             }
 
         case "value":
-            if !trimmed.isEmpty && valueStack.isEmpty {
-                pushValue(.string(trimmed))
+            if !value.isEmpty && valueStack.isEmpty {
+                pushValue(.string(value))
             }
 
         case "param":

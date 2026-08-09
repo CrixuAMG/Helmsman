@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CB368E3A30286F30003510EA /* NIOSSH in Frameworks */ = {isa = PBXBuildFile; productRef = CB1BCDB63009449C00D7B8F5 /* NIOSSH */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		CB1BCD9B3009449C00D7B8F3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CB368E3A30286F30003510EA /* NIOSSH in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -196,10 +201,10 @@
 			);
 			mainGroup = CB1BCD823009449A00D7B8F3;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			packageReferences = (
 				CB1BCDB53009449C00D7B8F4 /* XCRemoteSwiftPackageReference "swift-nio-ssh" */,
 			);
+			preferredProjectObjectVersion = 77;
 			productRefGroup = CB1BCD8C3009449A00D7B8F3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -258,25 +263,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		CB1BCDB53009449C00D7B8F4 /* XCRemoteSwiftPackageReference "swift-nio-ssh" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-nio-ssh.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.8.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		CB1BCDB63009449C00D7B8F5 /* NIOSSH */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = CB1BCDB53009449C00D7B8F4 /* XCRemoteSwiftPackageReference "swift-nio-ssh" */;
-			productName = NIOSSH;
-		};
-/* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXTargetDependency section */
 		CB1BCD9C3009449C00D7B8F3 /* PBXTargetDependency */ = {
@@ -600,6 +586,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CB1BCDB53009449C00D7B8F4 /* XCRemoteSwiftPackageReference "swift-nio-ssh" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-nio-ssh.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.8.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CB1BCDB63009449C00D7B8F5 /* NIOSSH */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CB1BCDB53009449C00D7B8F4 /* XCRemoteSwiftPackageReference "swift-nio-ssh" */;
+			productName = NIOSSH;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CB1BCD833009449A00D7B8F3 /* Project object */;
 }

@@ -110,6 +110,35 @@ final class ServiceManager {
         return try await provider.getProcessMetrics(pid: pid)
     }
 
+    func readProcessLog(controlName: String, stderr: Bool, offset: Int, maxBytes: Int) async throws -> ProcessLogChunk {
+        guard let provider = resolvedProvider else { throw ServiceError.providerUnavailable }
+        do {
+            return try await provider.readProcessLog(controlName, stderr: stderr, offset: offset, maxBytes: maxBytes)
+        } catch {
+            if shouldReconnect(error: error) {
+                resolvedProvider = nil
+                let newProvider = try await resolveProvider()
+                return try await newProvider.readProcessLog(controlName, stderr: stderr, offset: offset, maxBytes: maxBytes)
+            }
+            throw error
+        }
+    }
+
+    func clearProcessLogs(controlName: String) async throws {
+        guard let provider = resolvedProvider else { throw ServiceError.providerUnavailable }
+        do {
+            try await provider.clearProcessLogs(controlName)
+        } catch {
+            if shouldReconnect(error: error) {
+                resolvedProvider = nil
+                let newProvider = try await resolveProvider()
+                try await newProvider.clearProcessLogs(controlName)
+            } else {
+                throw error
+            }
+        }
+    }
+
     func reconnect() async {
         resolvedProvider = nil
         retryCount = 0

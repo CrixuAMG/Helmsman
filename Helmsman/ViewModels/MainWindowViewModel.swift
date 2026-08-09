@@ -21,6 +21,8 @@ final class MainWindowViewModel {
     let pollingEngine: PollingEngine
     let metricsStore = ProcessMetricsStore()
     let metricsPoller = ProcessMetricsPoller()
+    let logStore = ProcessLogStore()
+    let logPoller = ProcessLogPoller()
 
     init(connection: Connection) {
         self.connection = connection
@@ -87,6 +89,36 @@ final class MainWindowViewModel {
     func stopPolling() {
         pollingEngine.stop()
         metricsPoller.stop()
+        logPoller.stop()
+    }
+
+    func startLogPolling(for serviceID: String?) {
+        guard let serviceID else {
+            logPoller.stop()
+            return
+        }
+        guard let service = services.first(where: { $0.id == serviceID }) else {
+            logPoller.stop()
+            return
+        }
+        logPoller.start(service: service, serviceManager: serviceManager, store: logStore)
+    }
+
+    func clearLogs(for service: Service) async {
+        do {
+            try await serviceManager.clearProcessLogs(controlName: service.controlName)
+            logStore.clear(for: service.id)
+        } catch {
+            errorAlert = ErrorAlert(
+                title: "Action Failed",
+                message: "Failed to clear logs for '\(service.name)': \(error.localizedDescription)",
+                retryCount: 0,
+                onRetry: { [weak self] in
+                    await self?.clearLogs(for: service)
+                },
+                onReconnect: nil
+            )
+        }
     }
 
     func isPerformingAction(for service: Service) -> Bool {
