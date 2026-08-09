@@ -23,6 +23,8 @@ final class MainWindowViewModel {
     let metricsPoller = ProcessMetricsPoller()
     let logStore = ProcessLogStore()
     let logPoller = ProcessLogPoller()
+    let eventStore = ProcessEventStore()
+    private var hasLoadedOnce = false
 
     init(connection: Connection) {
         self.connection = connection
@@ -41,14 +43,22 @@ final class MainWindowViewModel {
     }
 
     func refresh() async {
+        let oldServices = services
         isLoading = true
         await serviceManager.refresh()
-        services = serviceManager.services
+        let newServices = serviceManager.services
+        services = newServices
         isConnected = serviceManager.isConnected
         activeProviderName = serviceManager.activeProviderName
         lastError = serviceManager.lastError
         retryCount = serviceManager.retryCount
         isLoading = false
+
+        if hasLoadedOnce {
+            detectEvents(between: oldServices, and: newServices)
+        } else if !newServices.isEmpty {
+            hasLoadedOnce = true
+        }
 
         if let error = lastError {
             errorAlert = ErrorAlert(
@@ -123,6 +133,14 @@ final class MainWindowViewModel {
 
     func isPerformingAction(for service: Service) -> Bool {
         activeActionServiceIDs.contains(service.id)
+    }
+
+    private func detectEvents(between oldServices: [Service], and newServices: [Service]) {
+        let detected = ProcessEventDetector.detectEvents(between: oldServices, and: newServices)
+        guard !detected.isEmpty else { return }
+        for event in detected {
+            eventStore.record(event.kind, detail: event.detail, for: event.serviceID)
+        }
     }
 
     func start(_ service: Service) {

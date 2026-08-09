@@ -4,6 +4,7 @@ struct ServiceDetailView: View {
     let service: Service
     let metricsStore: ProcessMetricsStore
     let logStore: ProcessLogStore
+    let eventStore: ProcessEventStore
     let memoryDisplayUnit: MemoryDisplayUnit
     let isPerformingAction: Bool
     let onStart: () -> Void
@@ -35,6 +36,17 @@ struct ServiceDetailView: View {
                 .padding(24)
                 .tabItem {
                     Label("Logs", systemImage: "doc.text")
+                }
+
+                ServiceTimelineView(
+                    service: service,
+                    eventStore: eventStore,
+                    metricsStore: metricsStore,
+                    memoryDisplayUnit: memoryDisplayUnit
+                )
+                .padding(24)
+                .tabItem {
+                    Label("Timeline", systemImage: "clock.arrow.circlepath")
                 }
             }
         }

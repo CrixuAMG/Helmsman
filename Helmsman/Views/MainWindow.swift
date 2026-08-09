@@ -108,6 +108,7 @@ struct MainWindow: View {
                 service: service,
                 metricsStore: viewModel.metricsStore,
                 logStore: viewModel.logStore,
+                eventStore: viewModel.eventStore,
                 memoryDisplayUnit: AppSettings.shared.memoryDisplayUnit,
                 isPerformingAction: viewModel.isPerformingAction(for: service),
                 onStart: { viewModel.start(service) },

@@ -5,6 +5,7 @@
 //  Created by Christian Job Kaal on 16/07/2026.
 //
 
+import Foundation
 import Testing
 @testable import Helmsman
 
@@ -76,5 +77,73 @@ api:worker-1                       FATAL     Exited too quickly
 
         #expect(await store.content(for: "a", stream: .stdout) == "hello\nworld\n")
         #expect(await store.offset(for: "a", stream: .stdout) == 12)
+    }
+
+    // MARK: - Event Detection
+
+    private func makeService(name: String, status: ServiceStatus, pid: Int, uptime: TimeInterval? = nil) -> Service {
+        Service(
+            name: name,
+            group: name,
+            status: status,
+            description: "",
+            pid: pid,
+            uptime: uptime,
+            exitStatus: nil
+        )
+    }
+
+    @Test func testDetectRestartOnPIDChange() {
+        let old = [makeService(name: "worker", status: .running, pid: 100, uptime: 500)]
+        let new = [makeService(name: "worker", status: .running, pid: 200, uptime: 5)]
+
+        let events = ProcessEventDetector.detectEvents(between: old, and: new)
+
+        #expect(events.count == 1)
+        #expect(events[0].kind == .restarted)
+        #expect(events[0].serviceID == "worker:worker")
+    }
+
+    @Test func testDetectStopAndStartTransitions() {
+        let old = [makeService(name: "worker", status: .running, pid: 100)]
+        let stopped = [makeService(name: "worker", status: .stopped, pid: 0)]
+        let started = [makeService(name: "worker", status: .running, pid: 100)]
+
+        let stopEvents = ProcessEventDetector.detectEvents(between: old, and: stopped)
+        let startEvents = ProcessEventDetector.detectEvents(between: stopped, and: started)
+
+        #expect(stopEvents.count == 1)
+        #expect(stopEvents[0].kind == .stopped)
+        #expect(startEvents.count == 1)
+        #expect(startEvents[0].kind == .started)
+    }
+
+    @Test func testDetectCrashedTransition() {
+        let old = [makeService(name: "worker", status: .running, pid: 100)]
+        let crashed = [makeService(name: "worker", status: .backingoff, pid: 0)]
+
+        let events = ProcessEventDetector.detectEvents(between: old, and: crashed)
+
+        #expect(events.count == 1)
+        #expect(events[0].kind == .crashed)
+    }
+
+    @MainActor
+    @Test func testEventStoreRestartNumberingAndRuntime() {
+        let store = ProcessEventStore()
+
+        store.record(.started, detail: "Process started", for: "worker:worker")
+        store.record(.restarted, detail: "", for: "worker:worker")
+        store.record(.restarted, detail: "", for: "worker:worker")
+
+        #expect(store.restartCount(for: "worker:worker") == 2)
+
+        let events = store.events(for: "worker:worker")
+        #expect(events[1].detail.contains("Restart #1"))
+        #expect(events[2].detail.contains("Restart #2"))
+
+        store.record(.stopped, detail: "Process stopped", for: "worker:worker")
+        store.record(.started, detail: "Process started", for: "worker:worker")
+        #expect(store.averageRuntime(for: "worker:worker") != nil)
     }
 }
