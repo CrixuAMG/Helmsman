@@ -12,5 +12,6 @@ struct ProviderConfiguration: Sendable {
     let xmlrpcEndpoint: String?
     let localEndpoint: String?
     let dockerContainer: String?
+    let dockerEndpoint: String?
     let timeout: TimeInterval
 }

@@ -47,6 +47,7 @@ final class ServiceManager {
         } catch {
             lastError = error
             isConnected = false
+            activeProviderName = nil
 
             if withRetry && shouldRetry(error: error) && retryCount < maxRetries {
                 retryCount += 1
@@ -202,11 +203,15 @@ final class ServiceManager {
             guard let container = config.dockerContainer, !container.isEmpty else {
                 throw ConnectionError.invalidConfiguration("Docker container name is required")
             }
-            let provider = SupervisorDockerProvider(
+            let provider = try SupervisorDockerProvider(
                 container: container,
                 supervisorctlPath: config.supervisorctlPath,
+                supervisorConfigPath: config.supervisorConfigPath,
+                supervisorEndpoint: config.xmlrpcEndpoint ?? "http://127.0.0.1:9001/RPC2",
+                username: config.username,
+                password: config.password,
                 timeout: config.timeout,
-                dockerEndpoint: dockerEndpoint(for: config)
+                dockerEndpoint: config.dockerEndpoint ?? dockerEndpoint(for: config)
             )
             resolvedProvider = provider
             activeProviderName = "Docker"
@@ -224,16 +229,6 @@ final class ServiceManager {
             activeProviderName = "XML-RPC"
             return provider
 
-        case .auto:
-            do {
-                let provider = try await createXMLRPCProvider(config: config)
-                _ = try await provider.getAllProcesses()
-                resolvedProvider = provider
-                activeProviderName = "XML-RPC"
-                return provider
-            } catch {
-                throw ConnectionError.connectionRefused
-            }
         }
     }
 

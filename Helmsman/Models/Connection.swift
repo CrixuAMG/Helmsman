@@ -17,6 +17,7 @@ final class Connection {
     var xmlrpcEndpoint: String?
     var localEndpoint: String?
     var dockerContainer: String?
+    var dockerEndpoint: String?
     var connectionMethodRaw: String
     var pollingInterval: TimeInterval
     var timeout: TimeInterval
@@ -38,7 +39,7 @@ final class Connection {
     }
 
     var connectionMethod: ConnectionMethod {
-        get { ConnectionMethod(rawValue: connectionMethodRaw) ?? .auto }
+        get { ConnectionMethod(rawValue: connectionMethodRaw) ?? .local }
         set { connectionMethodRaw = newValue.rawValue }
     }
 
@@ -123,7 +124,8 @@ final class Connection {
         xmlrpcEndpoint: String? = nil,
         localEndpoint: String? = nil,
         dockerContainer: String? = nil,
-        connectionMethod: ConnectionMethod = .auto,
+        dockerEndpoint: String? = nil,
+        connectionMethod: ConnectionMethod = .local,
         pollingInterval: TimeInterval = 5,
         timeout: TimeInterval = 30,
         autoReconnect: Bool = true,
@@ -146,6 +148,7 @@ final class Connection {
         self.xmlrpcEndpoint = xmlrpcEndpoint
         self.localEndpoint = localEndpoint
         self.dockerContainer = dockerContainer
+        self.dockerEndpoint = dockerEndpoint
         self.connectionMethodRaw = connectionMethod.rawValue
         self.pollingInterval = pollingInterval
         self.timeout = timeout
@@ -172,6 +175,7 @@ final class Connection {
             xmlrpcEndpoint: xmlrpcEndpoint,
             localEndpoint: localEndpoint,
             dockerContainer: dockerContainer,
+            dockerEndpoint: dockerEndpoint,
             timeout: timeout
         )
     }

@@ -38,6 +38,7 @@ final class ConnectionManager {
             xmlrpcEndpoint: connection.xmlrpcEndpoint,
             localEndpoint: connection.localEndpoint,
             dockerContainer: connection.dockerContainer,
+            dockerEndpoint: connection.dockerEndpoint,
             connectionMethod: connection.connectionMethod,
             pollingInterval: connection.pollingInterval,
             timeout: connection.timeout,
