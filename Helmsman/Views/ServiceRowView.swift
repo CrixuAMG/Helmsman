@@ -3,6 +3,8 @@ import SwiftUI
 struct ServiceRowView: View {
     let service: Service
     let isPerformingAction: Bool
+    let isFavorite: Bool
+    let onToggleFavorite: () -> Void
     let onStart: () -> Void
     let onStop: () -> Void
     let onRestart: () -> Void
@@ -35,6 +37,7 @@ struct ServiceRowView: View {
                     .frame(width: 94, alignment: .trailing)
             } else {
                 HStack(spacing: 8) {
+                    favoriteButton
                     actionButton("play.fill", action: onStart, disabled: service.status == .running, tint: .green)
                     actionButton("stop.fill", action: onStop, disabled: service.status == .stopped, tint: .red)
                     actionButton("arrow.clockwise", action: onRestart, disabled: false, tint: .blue)
@@ -53,6 +56,21 @@ struct ServiceRowView: View {
         .onHover { hovering in
             isHovered = hovering
         }
+    }
+
+    private var favoriteButton: some View {
+        Button(action: onToggleFavorite) {
+            Image(systemName: isFavorite ? "star.fill" : "star")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(isFavorite ? .yellow : .secondary)
+                .frame(width: 26, height: 26)
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(isFavorite ? Color.yellow.opacity(0.15) : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+        .help(isFavorite ? "Remove from favorites" : "Add to favorites")
     }
 
     private func actionButton(_ icon: String, action: @escaping () -> Void, disabled: Bool, tint: Color) -> some View {

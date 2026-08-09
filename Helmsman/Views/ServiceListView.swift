@@ -20,16 +20,24 @@ struct ServiceListView: View {
     private var serviceList: some View {
         VStack(spacing: 0) {
             List(selection: $viewModel.selectedServiceIDs) {
-                ForEach(viewModel.filteredServices) { service in
+                ForEach(viewModel.sortedServices) { service in
                     ServiceRowView(
                         service: service,
                         isPerformingAction: viewModel.isPerformingAction(for: service),
+                        isFavorite: viewModel.isFavorite(service.id),
+                        onToggleFavorite: { viewModel.toggleFavorite(for: service.id) },
                         onStart: { viewModel.start(service) },
                         onStop: { viewModel.stop(service) },
                         onRestart: { viewModel.restart(service) }
                     )
                     .tag(service.id)
                     .contextMenu {
+                        Button(isFavoriteLabel(service.id)) {
+                            viewModel.toggleFavorite(for: service.id)
+                        }
+
+                        Divider()
+
                         Button("Start") { viewModel.start(service) }
                             .disabled(service.status == .running || viewModel.isPerformingAction(for: service))
 
@@ -48,6 +56,10 @@ struct ServiceListView: View {
                 bulkActionBar
             }
         }
+    }
+
+    private func isFavoriteLabel(_ serviceID: String) -> String {
+        viewModel.isFavorite(serviceID) ? "Remove from Favorites" : "Add to Favorites"
     }
 
     private var bulkActionBar: some View {

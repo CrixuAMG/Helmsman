@@ -1,7 +1,9 @@
 import SwiftUI
+import SwiftData
 
 struct MainWindow: View {
     let connection: Connection
+    @Environment(\.modelContext) private var modelContext
     @State private var viewModel: MainWindowViewModel
     @State private var activeAlert: ActiveAlert?
     @State private var showGraphSheet = false
@@ -39,6 +41,9 @@ struct MainWindow: View {
         }
 
         .task {
+            viewModel.onFavoriteDidChange = {
+                try? modelContext.save()
+            }
             await viewModel.refresh()
             viewModel.startPolling()
             viewModel.startLogPolling(for: viewModel.selectedServiceID)
@@ -119,6 +124,8 @@ struct MainWindow: View {
                 eventStore: viewModel.eventStore,
                 memoryDisplayUnit: AppSettings.shared.memoryDisplayUnit,
                 isPerformingAction: viewModel.isPerformingAction(for: service),
+                isFavorite: viewModel.isFavorite(service.id),
+                onToggleFavorite: { viewModel.toggleFavorite(for: service.id) },
                 onStart: { viewModel.start(service) },
                 onStop: { viewModel.stop(service) },
                 onRestart: { viewModel.restart(service) },

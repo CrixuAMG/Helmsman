@@ -16,6 +16,8 @@ final class MainWindowViewModel {
     var safeModeAlert: SafeModeAlert?
     var errorAlert: ErrorAlert?
 
+    var onFavoriteDidChange: (() -> Void)?
+
     private let connection: Connection
     private let serviceManager: ServiceManager
     let pollingEngine: PollingEngine
@@ -40,6 +42,28 @@ final class MainWindowViewModel {
             $0.name.localizedCaseInsensitiveContains(searchText) ||
             $0.group.localizedCaseInsensitiveContains(searchText)
         }
+    }
+
+    var favoriteServiceIDs: Set<String> {
+        connection.favoriteServiceIDs
+    }
+
+    var sortedServices: [Service] {
+        filteredServices.sorted { lhs, rhs in
+            let lhsFavorite = favoriteServiceIDs.contains(lhs.id)
+            let rhsFavorite = favoriteServiceIDs.contains(rhs.id)
+            if lhsFavorite != rhsFavorite { return lhsFavorite }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
+    func isFavorite(_ serviceID: String) -> Bool {
+        favoriteServiceIDs.contains(serviceID)
+    }
+
+    func toggleFavorite(for serviceID: String) {
+        connection.toggleFavorite(serviceID: serviceID)
+        onFavoriteDidChange?()
     }
 
     var selectedServiceID: String? {

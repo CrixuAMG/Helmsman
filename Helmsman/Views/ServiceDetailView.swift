@@ -7,6 +7,8 @@ struct ServiceDetailView: View {
     let eventStore: ProcessEventStore
     let memoryDisplayUnit: MemoryDisplayUnit
     let isPerformingAction: Bool
+    let isFavorite: Bool
+    let onToggleFavorite: () -> Void
     let onStart: () -> Void
     let onStop: () -> Void
     let onRestart: () -> Void
@@ -80,6 +82,11 @@ struct ServiceDetailView: View {
                     .frame(width: 188, alignment: .trailing)
             } else {
                 HStack(spacing: 8) {
+                    Button(action: onToggleFavorite) {
+                        Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
+                    }
+                    .help(isFavorite ? "Remove from favorites" : "Add to favorites")
+
                     Button(action: onStart) {
                         Label("Start", systemImage: "play.fill")
                     }
