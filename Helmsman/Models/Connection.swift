@@ -23,6 +23,8 @@ final class Connection {
     var autoReconnect: Bool
     var safeMode: Bool
     var notes: String?
+    var dependencyEdgesData: Data = Data()
+    var favoriteServiceIDsData: Data = Data()
     var createdAt: Date
     var updatedAt: Date
 
@@ -39,6 +41,46 @@ final class Connection {
     var accentColor: Color {
         get { Color(hex: accentColorHex) ?? .blue }
         set { accentColorHex = newValue.toHex() ?? "#007AFF" }
+    }
+
+    var dependencyEdges: [DependencyEdge] {
+        get {
+            (try? JSONDecoder().decode([DependencyEdge].self, from: dependencyEdgesData)) ?? []
+        }
+        set {
+            dependencyEdgesData = (try? JSONEncoder().encode(newValue)) ?? Data()
+        }
+    }
+
+    func addDependency(from source: String, to target: String) {
+        var edges = dependencyEdges
+        let edge = DependencyEdge(source: source, target: target)
+        guard source != target, !edges.contains(edge) else { return }
+        edges.append(edge)
+        dependencyEdges = edges
+    }
+
+    func removeDependency(from source: String, to target: String) {
+        dependencyEdges = dependencyEdges.filter { $0.source != source || $0.target != target }
+    }
+
+    var favoriteServiceIDs: Set<String> {
+        get {
+            (try? JSONDecoder().decode(Set<String>.self, from: favoriteServiceIDsData)) ?? []
+        }
+        set {
+            favoriteServiceIDsData = (try? JSONEncoder().encode(newValue)) ?? Data()
+        }
+    }
+
+    func toggleFavorite(serviceID: String) {
+        var favorites = favoriteServiceIDs
+        if favorites.contains(serviceID) {
+            favorites.remove(serviceID)
+        } else {
+            favorites.insert(serviceID)
+        }
+        favoriteServiceIDs = favorites
     }
 
     init(

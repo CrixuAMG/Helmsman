@@ -4,6 +4,7 @@ struct MainWindow: View {
     let connection: Connection
     @State private var viewModel: MainWindowViewModel
     @State private var activeAlert: ActiveAlert?
+    @State private var showGraphSheet = false
 
     enum ActiveAlert: Identifiable {
         case safeMode(SafeModeAlert)
@@ -97,6 +98,12 @@ struct MainWindow: View {
                     )
                 }
             }
+        }
+        .sheet(isPresented: $showGraphSheet) {
+            DependencyGraphSheetView(
+                viewModel: viewModel,
+                connection: connection
+            )
         }
     }
 
@@ -293,6 +300,15 @@ struct MainWindow: View {
                 ProgressView()
                     .controlSize(.small)
             }
+        }
+
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                showGraphSheet = true
+            } label: {
+                Label("Dependency Graph", systemImage: "point.3.connected.trianglepath.dotted")
+            }
+            .disabled(viewModel.services.isEmpty)
         }
 
         ToolbarItem(placement: .primaryAction) {
