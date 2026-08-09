@@ -102,7 +102,8 @@ struct MainWindow: View {
 
     @ViewBuilder
     private var detailPane: some View {
-        if let serviceID = viewModel.selectedServiceID,
+        if viewModel.selectedServiceIDs.count == 1,
+           let serviceID = viewModel.selectedServiceID,
            let service = viewModel.services.first(where: { $0.id == serviceID }) {
             ServiceDetailView(
                 service: service,
@@ -118,6 +119,9 @@ struct MainWindow: View {
                     Task { await viewModel.clearLogs(for: service) }
                 }
             )
+
+        } else if viewModel.selectedServices.count > 1 {
+            bulkSelectionPane
 
         } else {
             VStack(spacing: 16) {
@@ -137,6 +141,53 @@ struct MainWindow: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         }
+    }
+
+    private var bulkSelectionPane: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "checklist")
+                .font(.system(size: 36))
+                .foregroundStyle(.secondary)
+
+            Text("\(viewModel.selectedServices.count) Services Selected")
+                .font(.title2)
+                .fontWeight(.medium)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(viewModel.selectedServices.sorted { $0.name < $1.name }) { service in
+                        HStack(spacing: 8) {
+                            StatusBadge(status: service.status)
+                            Text(service.name)
+                                .font(.body)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                    }
+                }
+                .padding(.horizontal, 24)
+            }
+
+            HStack(spacing: 12) {
+                Button(action: viewModel.bulkStart) {
+                    Label("Start", systemImage: "play.fill")
+                }
+                .disabled(viewModel.selectedServices.allSatisfy { $0.status == .running })
+
+                Button(action: viewModel.bulkStop) {
+                    Label("Stop", systemImage: "stop.fill")
+                }
+                .disabled(viewModel.selectedServices.allSatisfy { $0.status == .stopped })
+
+                Button(action: viewModel.bulkRestart) {
+                    Label("Restart", systemImage: "arrow.clockwise")
+                }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var runningServiceCount: Int {
@@ -242,6 +293,28 @@ struct MainWindow: View {
                 ProgressView()
                     .controlSize(.small)
             }
+        }
+
+        ToolbarItem(placement: .primaryAction) {
+            Menu {
+                ForEach(BulkPreset.allCases) { preset in
+                    Button {
+                        viewModel.performPreset(preset)
+                    } label: {
+                        Label(preset.title, systemImage: preset.systemImage)
+                    }
+                }
+
+                Divider()
+
+                Button("Clear Selection") {
+                    viewModel.selectedServiceIDs = []
+                }
+                .disabled(viewModel.selectedServiceIDs.isEmpty)
+            } label: {
+                Label("Bulk Actions", systemImage: "square.stack.3d.up")
+            }
+            .disabled(viewModel.services.isEmpty)
         }
     }
 }

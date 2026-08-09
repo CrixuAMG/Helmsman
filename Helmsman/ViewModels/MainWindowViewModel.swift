@@ -4,7 +4,7 @@ import Observation
 @Observable
 final class MainWindowViewModel {
     var services: [Service] = []
-    var selectedServiceID: String?
+    var selectedServiceIDs: Set<String> = []
     var isLoading: Bool = false
     var isConnected: Bool = false
     var activeProviderName: String?
@@ -40,6 +40,20 @@ final class MainWindowViewModel {
             $0.name.localizedCaseInsensitiveContains(searchText) ||
             $0.group.localizedCaseInsensitiveContains(searchText)
         }
+    }
+
+    var selectedServiceID: String? {
+        selectedServiceIDs.count == 1 ? selectedServiceIDs.first : nil
+    }
+
+    var selectedServices: [Service] {
+        services.filter { selectedServiceIDs.contains($0.id) }
+    }
+
+    var isBulkActionActive: Bool {
+        let selected = selectedServices
+        guard !selected.isEmpty else { return false }
+        return selected.allSatisfy { activeActionServiceIDs.contains($0.id) }
     }
 
     func refresh() async {
@@ -245,6 +259,114 @@ final class MainWindowViewModel {
                 retryCount: 0,
                 onRetry: { [weak self] in
                     await self?.performRestart(service)
+                },
+                onReconnect: nil
+            )
+        }
+    }
+
+    // MARK: - Bulk Actions
+
+    func bulkStart() {
+        guard !selectedServices.isEmpty else { return }
+        if connection.safeMode {
+            safeModeAlert = SafeModeAlert(
+                title: "Start \(selectedServices.count) Services",
+                message: bulkConfirmationMessage(action: "start"),
+                action: { [weak self] in
+                    await self?.performBulk(.start, services: self?.selectedServices ?? [])
+                }
+            )
+        } else {
+            Task { await performBulk(.start, services: selectedServices) }
+        }
+    }
+
+    func bulkStop() {
+        guard !selectedServices.isEmpty else { return }
+        if connection.safeMode {
+            safeModeAlert = SafeModeAlert(
+                title: "Stop \(selectedServices.count) Services",
+                message: bulkConfirmationMessage(action: "stop"),
+                action: { [weak self] in
+                    await self?.performBulk(.stop, services: self?.selectedServices ?? [])
+                }
+            )
+        } else {
+            Task { await performBulk(.stop, services: selectedServices) }
+        }
+    }
+
+    func bulkRestart() {
+        guard !selectedServices.isEmpty else { return }
+        if connection.safeMode {
+            safeModeAlert = SafeModeAlert(
+                title: "Restart \(selectedServices.count) Services",
+                message: bulkConfirmationMessage(action: "restart"),
+                action: { [weak self] in
+                    await self?.performBulk(.restart, services: self?.selectedServices ?? [])
+                }
+            )
+        } else {
+            Task { await performBulk(.restart, services: selectedServices) }
+        }
+    }
+
+    func performPreset(_ preset: BulkPreset) {
+        let services = preset.matchingServices(in: services)
+        guard !services.isEmpty else { return }
+
+        if connection.safeMode {
+            safeModeAlert = SafeModeAlert(
+                title: "\(preset.action.displayName.uppercased()): \(preset.title)",
+                message: "This will \(preset.action.verb) \(services.count) service(s):\n\n\(services.map(\.name).joined(separator: "\n"))",
+                action: { [weak self] in
+                    await self?.performBulk(preset.action, services: services)
+                }
+            )
+        } else {
+            Task { await performBulk(preset.action, services: services) }
+        }
+    }
+
+    private func bulkConfirmationMessage(action: String) -> String {
+        let names = selectedServices.prefix(12).map(\.name)
+        let suffix = selectedServices.count > 12 ? "\n…and \(selectedServices.count - 12) more" : ""
+        return "This will \(action) \(selectedServices.count) service(s):\n\n\(names.joined(separator: "\n"))\(suffix)"
+    }
+
+    private func performBulk(_ action: BulkServiceAction, services: [Service]) async {
+        guard !services.isEmpty else { return }
+
+        let ids = services.map(\.id)
+        for id in ids { activeActionServiceIDs.insert(id) }
+        defer { for id in ids { activeActionServiceIDs.remove(id) } }
+
+        var failures: [String: String] = [:]
+
+        for service in services {
+            do {
+                switch action {
+                case .start: try await serviceManager.start(service)
+                case .stop: try await serviceManager.stop(service)
+                case .restart: try await serviceManager.restart(service)
+                }
+            } catch {
+                failures[service.name] = error.localizedDescription
+            }
+        }
+
+        await refresh()
+
+        if !failures.isEmpty {
+            let details = failures.map { "\($0.key): \($0.value)" }.joined(separator: "\n")
+            errorAlert = ErrorAlert(
+                title: "Some Actions Failed",
+                message: "\(failures.count) of \(services.count) actions failed:\n\n\(details)",
+                retryCount: 0,
+                onRetry: { [weak self] in
+                    let failedServices = services.filter { failures[$0.name] != nil }
+                    await self?.performBulk(action, services: failedServices)
                 },
                 onReconnect: nil
             )
