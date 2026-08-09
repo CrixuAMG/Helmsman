@@ -44,6 +44,8 @@ final class ConnectionManager {
             autoReconnect: connection.autoReconnect,
             safeMode: connection.safeMode,
             touchIDProtected: connection.touchIDProtected,
+            autoClearOldLogs: connection.autoClearOldLogs,
+            logRetentionDays: connection.logRetentionDays,
             notes: connection.notes
         )
         modelContext.insert(copy)

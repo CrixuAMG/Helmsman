@@ -146,4 +146,103 @@ api:worker-1                       FATAL     Exited too quickly
         store.record(.started, detail: "Process started", for: "worker:worker")
         #expect(store.averageRuntime(for: "worker:worker") != nil)
     }
+
+    // MARK: - Log Disk Usage
+
+    @Test func testParseConfigResolvesLogFiles() {
+        let config = """
+        [supervisord]
+        logfile=%(here)s/supervisord.log
+
+        [program:counter]
+        command=bash %(here)s/counter.sh
+        stdout_logfile=%(here)s/counter.log
+        stderr_logfile=%(here)s/counter_err.log
+
+        [program:worker]
+        command=bash %(here)s/worker.sh
+        stdout_logfile=/var/log/worker.log
+
+        [group:api]
+        programs=api,worker-1
+
+        [program:api]
+        command=bash %(here)s/api.sh
+        stdout_logfile=%(here)s/api.log
+        """
+
+        let dir = URL(fileURLWithPath: "/tmp/helmsman-test-config")
+        let files = LogDiskUsageProvider.parseConfig(config, configDirectory: dir)
+
+        #expect(files.count == 4)
+        #expect(files.contains(where: { $0.serviceKey == "counter" && $0.isStdout && $0.url.path.hasSuffix("counter.log") }))
+        #expect(files.contains(where: { $0.serviceKey == "counter" && !$0.isStdout && $0.url.path.hasSuffix("counter_err.log") }))
+        #expect(files.contains(where: { $0.serviceKey == "worker" && $0.url.path == "/var/log/worker.log" }))
+        #expect(files.contains(where: { $0.serviceKey == "api:api" && $0.isStdout }))
+    }
+
+    @MainActor
+    @Test func testCollectSizesLogFiles() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("helmsman-usage-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let configPath = dir.appendingPathComponent("supervisord.conf")
+        let logPath = dir.appendingPathComponent("counter.log")
+        try "hello world".write(to: logPath, atomically: true, encoding: .utf8)
+        try """
+        [program:counter]
+        command=bash %(here)s/counter.sh
+        stdout_logfile=%(here)s/counter.log
+        """.write(to: configPath, atomically: true, encoding: .utf8)
+
+        let connection = Connection(
+            name: "test",
+            supervisorConfigPath: configPath.path,
+            connectionMethod: .local
+        )
+
+        let usage = LogDiskUsageProvider.collect(for: connection)
+
+        #expect(usage.count == 1)
+        #expect(usage[0].serviceName == "counter")
+        #expect(usage[0].stdoutBytes == 11)
+    }
+
+    @MainActor
+    @Test func testCleanupRemovesOnlyOldLogs() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("helmsman-cleanup-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let configPath = dir.appendingPathComponent("supervisord.conf")
+        let oldLog = dir.appendingPathComponent("old.log")
+        let freshLog = dir.appendingPathComponent("fresh.log")
+        try "old".write(to: oldLog, atomically: true, encoding: .utf8)
+        try "fresh".write(to: freshLog, atomically: true, encoding: .utf8)
+        try """
+        [program:counter]
+        command=bash %(here)s/counter.sh
+        stdout_logfile=%(here)s/old.log
+        stderr_logfile=%(here)s/fresh.log
+        """.write(to: configPath, atomically: true, encoding: .utf8)
+
+        let oldDate = Date().addingTimeInterval(-31 * 86_400)
+        try FileManager.default.setAttributes([.modificationDate: oldDate], ofItemAtPath: oldLog.path)
+
+        let connection = Connection(
+            name: "test",
+            supervisorConfigPath: configPath.path,
+            connectionMethod: .local
+        )
+
+        let result = LogDiskUsageProvider.cleanupOldLogs(for: connection, retentionDays: 30)
+
+        #expect(result.files == 1)
+        #expect(result.bytes == 3)
+        #expect(!FileManager.default.fileExists(atPath: oldLog.path))
+        #expect(FileManager.default.fileExists(atPath: freshLog.path))
+    }
 }

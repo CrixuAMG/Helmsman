@@ -27,6 +27,8 @@ final class Connection {
     var favoriteServiceIDsData: Data = Data()
     var productionServiceIDsData: Data = Data()
     var touchIDProtected: Bool = false
+    var autoClearOldLogs: Bool = false
+    var logRetentionDays: Int = 30
     var createdAt: Date
     var updatedAt: Date
 
@@ -127,6 +129,8 @@ final class Connection {
         autoReconnect: Bool = true,
         safeMode: Bool = true,
         touchIDProtected: Bool = false,
+        autoClearOldLogs: Bool = false,
+        logRetentionDays: Int = 30,
         notes: String? = nil
     ) {
         self.id = UUID()
@@ -148,6 +152,8 @@ final class Connection {
         self.autoReconnect = autoReconnect
         self.safeMode = safeMode
         self.touchIDProtected = touchIDProtected
+        self.autoClearOldLogs = autoClearOldLogs
+        self.logRetentionDays = logRetentionDays
         self.notes = notes
         self.createdAt = Date()
         self.updatedAt = Date()

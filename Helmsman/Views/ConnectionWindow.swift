@@ -115,13 +115,15 @@ struct ConnectionWindow: View {
                         .foregroundStyle(.secondary)
                     Text(connection.authenticationMethod.displayName)
                 }
-                if connection.safeMode {
-                    Label("Safe Mode Enabled", systemImage: "shield.fill")
-                        .foregroundStyle(.orange)
-                        .font(.caption)
-                }
+            if connection.safeMode {
+                Label("Safe Mode Enabled", systemImage: "shield.fill")
+                    .foregroundStyle(.orange)
+                    .font(.caption)
+            }
             }
             .font(.body)
+
+            diskUsageSection(connection)
 
             HStack(spacing: 12) {
                 Button("Edit") {
@@ -141,6 +143,80 @@ struct ConnectionWindow: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
+    }
+
+    @ViewBuilder
+    private func diskUsageSection(_ connection: Connection) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Log Disk Usage", systemImage: "internaldrive")
+                    .font(.headline)
+                Spacer()
+                Button {
+                    viewModel.refreshDiskUsage(for: connection)
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .help("Refresh")
+
+                if connection.connectionMethod == .local {
+                    Button("Cleanup Now") {
+                        viewModel.cleanupOldLogs(for: connection)
+                    }
+                    .buttonStyle(.bordered)
+                    .help("Delete resolved log files older than the retention period")
+                }
+            }
+
+            if connection.connectionMethod != .local {
+                Text("Disk usage insight and log cleanup are only available for local connections.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if viewModel.logDiskUsage.isEmpty {
+                Text("No log files resolved. Set a supervisor config path to track log sizes.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                HStack {
+                    Text("Total: \(viewModel.totalLogBytes.formatted(.byteCount(style: .file)))")
+                        .font(.callout)
+                        .fontWeight(.medium)
+                    Spacer()
+                    Text("Retention: \(connection.logRetentionDays) days\(connection.autoClearOldLogs ? " · auto-clean on" : "")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                ScrollView {
+                    VStack(spacing: 4) {
+                        ForEach(viewModel.logDiskUsage) { usage in
+                            HStack {
+                                Text(usage.serviceName)
+                                Spacer()
+                                Text(usage.totalBytes.formatted(.byteCount(style: .file)))
+                                    .monospacedDigit()
+                            }
+                            .font(.caption)
+                        }
+                    }
+                }
+                .frame(maxHeight: 140)
+
+                if let result = viewModel.lastCleanupResult {
+                    Text(result)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(.regularMaterial)
+        )
+        .onAppear {
+            viewModel.refreshDiskUsage(for: connection)
+        }
     }
 
     private var emptyState: some View {

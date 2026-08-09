@@ -231,6 +231,18 @@ struct ConnectionFormView: View {
             Toggle("Safe Mode", isOn: $viewModel.safeMode)
             Toggle("Touch ID for Production Stops", isOn: $viewModel.touchIDProtected)
                 .help("Require Touch ID before stopping services marked as production.")
+
+            FormField(label: "Log Retention") {
+                HStack {
+                    TextField("30", value: $viewModel.logRetentionDays, format: .number)
+                        .frame(width: 80)
+                    Text("days")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Toggle("Auto-Clear Old Logs", isOn: $viewModel.autoClearOldLogs)
+                .help("Automatically delete resolved log files older than the retention period.")
         }
     }
 

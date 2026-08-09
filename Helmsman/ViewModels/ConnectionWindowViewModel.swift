@@ -7,6 +7,27 @@ final class ConnectionWindowViewModel {
     var selectedConnectionID: UUID?
     var isEditing = false
 
+    var logDiskUsage: [ServiceLogDiskUsage] = []
+    var lastCleanupResult: String?
+
+    var totalLogBytes: Int64 {
+        logDiskUsage.reduce(0) { $0 + $1.totalBytes }
+    }
+
+    func refreshDiskUsage(for connection: Connection) {
+        logDiskUsage = LogDiskUsageProvider.collect(for: connection)
+        lastCleanupResult = nil
+    }
+
+    func cleanupOldLogs(for connection: Connection) {
+        let result = LogDiskUsageProvider.cleanupOldLogs(
+            for: connection,
+            retentionDays: connection.logRetentionDays
+        )
+        lastCleanupResult = "Removed \(result.files) file(s), freed \(result.bytes.formatted(.byteCount(style: .file)))"
+        refreshDiskUsage(for: connection)
+    }
+
     var name = ""
     var accentColorHex = "#007AFF"
     var host = ""
@@ -26,6 +47,8 @@ final class ConnectionWindowViewModel {
     var autoReconnect = true
     var safeMode = true
     var touchIDProtected = false
+    var autoClearOldLogs = false
+    var logRetentionDays = 30
     var notes = ""
 
     var isTesting = false
@@ -191,6 +214,8 @@ final class ConnectionWindowViewModel {
         autoReconnect = connection.autoReconnect
         safeMode = connection.safeMode
         touchIDProtected = connection.touchIDProtected
+        autoClearOldLogs = connection.autoClearOldLogs
+        logRetentionDays = connection.logRetentionDays
         notes = connection.notes ?? ""
     }
 
@@ -214,6 +239,8 @@ final class ConnectionWindowViewModel {
         autoReconnect = true
         safeMode = true
         touchIDProtected = false
+        autoClearOldLogs = false
+        logRetentionDays = 30
         notes = ""
     }
 
@@ -237,6 +264,8 @@ final class ConnectionWindowViewModel {
             autoReconnect: autoReconnect,
             safeMode: safeMode,
             touchIDProtected: touchIDProtected,
+            autoClearOldLogs: autoClearOldLogs,
+            logRetentionDays: logRetentionDays,
             notes: optionalText(notes)
         )
     }
@@ -260,6 +289,8 @@ final class ConnectionWindowViewModel {
         connection.autoReconnect = autoReconnect
         connection.safeMode = safeMode
         connection.touchIDProtected = touchIDProtected
+        connection.autoClearOldLogs = autoClearOldLogs
+        connection.logRetentionDays = logRetentionDays
         connection.notes = optionalText(notes)
     }
 

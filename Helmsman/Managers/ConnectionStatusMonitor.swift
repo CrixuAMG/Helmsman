@@ -18,6 +18,7 @@ final class ConnectionStatusMonitor {
 
     private(set) var statuses: [UUID: Status] = [:]
     private var pollTask: Task<Void, Never>?
+    private var cleanupTask: Task<Void, Never>?
     private var managers: [UUID: ServiceManager] = [:]
     private var currentConnections: [Connection] = []
     private var restartWindows: [String: [Date]] = [:]
@@ -59,6 +60,8 @@ final class ConnectionStatusMonitor {
                 try? await Task.sleep(for: self?.pollInterval ?? .seconds(10))
             }
         }
+
+        startCleanupTask()
     }
 
     func refreshNow() async {
@@ -68,6 +71,8 @@ final class ConnectionStatusMonitor {
     func stop() {
         pollTask?.cancel()
         pollTask = nil
+        cleanupTask?.cancel()
+        cleanupTask = nil
         managers.removeAll()
         statuses.removeAll()
         restartWindows.removeAll()
@@ -136,6 +141,28 @@ final class ConnectionStatusMonitor {
                 notifiedServiceIDs.remove(serviceID)
                 restartWindows[serviceID] = []
             }
+        }
+    }
+
+    // MARK: - Log cleanup
+
+    private func startCleanupTask() {
+        guard cleanupTask == nil else { return }
+        cleanupTask = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.runLogCleanup()
+                try? await Task.sleep(for: .seconds(6 * 60 * 60))
+            }
+        }
+    }
+
+    private func runLogCleanup() async {
+        for connection in currentConnections {
+            guard connection.autoClearOldLogs else { continue }
+            _ = LogDiskUsageProvider.cleanupOldLogs(
+                for: connection,
+                retentionDays: connection.logRetentionDays
+            )
         }
     }
 
