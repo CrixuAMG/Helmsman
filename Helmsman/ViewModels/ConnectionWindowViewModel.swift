@@ -60,10 +60,8 @@ final class ConnectionWindowViewModel {
 
         switch connectionMethod {
         case .local:
-            let hasConfig = !supervisorConfigPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            let hasEndpoint = URL(string: localEndpoint) != nil
-                && !(localEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            return hasConfig || hasEndpoint
+            return URL(string: localEndpoint) != nil
+                && !localEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .docker:
             return !host.isEmpty && port > 0 && !dockerContainer.isEmpty && !supervisorctlPath.isEmpty
         case .ssh:
@@ -325,10 +323,14 @@ final class ConnectionWindowViewModel {
 
         switch connectionMethod {
         case .local:
-            return SupervisorLocalProvider(
-                supervisorctlPath: config.supervisorctlPath,
-                supervisorConfigPath: config.supervisorConfigPath,
-                supervisorEndpoint: config.localEndpoint,
+            guard let endpointString = config.localEndpoint,
+                  let endpoint = URL(string: endpointString) else {
+                throw ConnectionError.invalidConfiguration("Local XML-RPC endpoint is required")
+            }
+            return SupervisorXMLRPCProvider(
+                endpoint: endpoint,
+                username: config.username,
+                password: config.password,
                 timeout: config.timeout
             )
         case .docker:
@@ -368,6 +370,10 @@ final class ConnectionWindowViewModel {
                 timeout: config.timeout
             )
         }
+    }
+
+    func selectSupervisorctl(url: URL) {
+        supervisorctlPath = url.path
     }
 
     private var hasValidSSHCredentials: Bool {

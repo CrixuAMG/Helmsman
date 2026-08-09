@@ -173,24 +173,22 @@ struct ConnectionFormView: View {
     private var supervisorSection: some View {
         if viewModel.connectionMethod != .docker {
             FormSection(title: "Supervisor") {
-                if viewModel.connectionMethod == .local || viewModel.connectionMethod == .ssh {
+                if viewModel.connectionMethod == .ssh {
                     FormField(label: "supervisorctl Path") {
                         HStack {
                             TextField("/usr/bin/supervisorctl", text: $viewModel.supervisorctlPath)
 
-                            if viewModel.connectionMethod == .local {
-                                Button("Detect") {
-                                    Task { await viewModel.detectSupervisorctlPath() }
-                                }
+                            Button("Detect") {
+                                Task { await viewModel.detectSupervisorctlPath() }
+                            }
 
-                                Button("Browse") {
-                                    let panel = NSOpenPanel()
-                                    panel.allowsMultipleSelection = false
-                                    panel.canChooseDirectories = false
-                                    panel.canChooseFiles = true
-                                    if panel.runModal() == .OK, let url = panel.url {
-                                        viewModel.supervisorctlPath = url.path
-                                    }
+                            Button("Browse") {
+                                let panel = NSOpenPanel()
+                                panel.allowsMultipleSelection = false
+                                panel.canChooseDirectories = false
+                                panel.canChooseFiles = true
+                                if panel.runModal() == .OK, let url = panel.url {
+                                    viewModel.selectSupervisorctl(url: url)
                                 }
                             }
                         }
@@ -199,7 +197,8 @@ struct ConnectionFormView: View {
 
                 if viewModel.connectionMethod == .local {
                     FormField(label: "Local XML-RPC URL") {
-                        TextField("Optional when using a config file", text: $viewModel.localEndpoint)
+                        TextField("http://127.0.0.1:9001/RPC2", text: $viewModel.localEndpoint)
+                            .help("Supervisor must expose an HTTP XML-RPC server at this URL.")
                     }
                 }
 
@@ -337,9 +336,7 @@ struct ConnectionFormView: View {
 
         switch viewModel.connectionMethod {
         case .local:
-            let hasConfig = !viewModel.supervisorConfigPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            let hasEndpoint = !viewModel.localEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            return !viewModel.supervisorctlPath.isEmpty && (hasConfig || hasEndpoint)
+            return !viewModel.localEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .docker:
             return !viewModel.dockerContainer.isEmpty && !viewModel.xmlrpcEndpoint.isEmpty
         case .ssh:

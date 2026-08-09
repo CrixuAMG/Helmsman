@@ -191,14 +191,9 @@ final class ServiceManager {
 
         switch connection.connectionMethod {
         case .local:
-            let provider = SupervisorLocalProvider(
-                supervisorctlPath: config.supervisorctlPath,
-                supervisorConfigPath: config.supervisorConfigPath,
-                supervisorEndpoint: config.localEndpoint,
-                timeout: config.timeout
-            )
+            let provider = try await createLocalXMLRPCProvider(config: config)
             resolvedProvider = provider
-            activeProviderName = "Local"
+            activeProviderName = "Local XML-RPC"
             return provider
 
         case .docker:
@@ -256,6 +251,20 @@ final class ServiceManager {
     private func createXMLRPCProvider(config: ProviderConfiguration) async throws -> any ServiceManagerProvider {
         guard let endpointStr = config.xmlrpcEndpoint, let endpoint = URL(string: endpointStr) else {
             throw ConnectionError.invalidConfiguration("XML-RPC endpoint is required")
+        }
+
+        return SupervisorXMLRPCProvider(
+            endpoint: endpoint,
+            username: config.username,
+            password: config.password,
+            timeout: config.timeout
+        )
+    }
+
+    private func createLocalXMLRPCProvider(config: ProviderConfiguration) async throws -> any ServiceManagerProvider {
+        guard let endpointString = config.localEndpoint,
+              let endpoint = URL(string: endpointString) else {
+            throw ConnectionError.invalidConfiguration("Local XML-RPC endpoint is required")
         }
 
         return SupervisorXMLRPCProvider(

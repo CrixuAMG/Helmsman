@@ -103,7 +103,8 @@ final class SupervisorLocalProvider: ServiceManagerProvider, @unchecked Sendable
     private nonisolated func runSupervisorctl(_ arguments: [String]) async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: supervisorctlPath)
+            let executableURL = URL(fileURLWithPath: supervisorctlPath)
+            process.executableURL = executableURL
             var commandArguments: [String] = []
             if let supervisorConfigPath, !supervisorConfigPath.isEmpty {
                 commandArguments += ["-c", supervisorConfigPath]
