@@ -17,6 +17,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: swift build -v
+      run: xcodebuild -project Helmsman.xcodeproj -scheme Helmsman -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
     - name: Run tests
-      run: swift test -v
+      run: xcodebuild -project Helmsman.xcodeproj -scheme Helmsman -configuration Debug -destination 'platform=macOS' -only-testing:HelmsmanTests CODE_SIGNING_ALLOWED=NO test
