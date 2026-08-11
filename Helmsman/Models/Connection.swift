@@ -26,6 +26,7 @@ final class Connection {
     var notes: String?
     var dependencyEdgesData: Data = Data()
     var favoriteServiceIDsData: Data = Data()
+    // Retained for existing stores; production marking is no longer exposed.
     var productionServiceIDsData: Data = Data()
     var processTagsData: Data = Data()
     var touchIDProtected: Bool = false
@@ -87,29 +88,6 @@ final class Connection {
             favorites.insert(serviceID)
         }
         favoriteServiceIDs = favorites
-    }
-
-    var productionServiceIDs: Set<String> {
-        get {
-            (try? JSONDecoder().decode(Set<String>.self, from: productionServiceIDsData)) ?? []
-        }
-        set {
-            productionServiceIDsData = (try? JSONEncoder().encode(newValue)) ?? Data()
-        }
-    }
-
-    func isProductionService(_ serviceID: String) -> Bool {
-        productionServiceIDs.contains(serviceID)
-    }
-
-    func toggleProduction(serviceID: String) {
-        var production = productionServiceIDs
-        if production.contains(serviceID) {
-            production.remove(serviceID)
-        } else {
-            production.insert(serviceID)
-        }
-        productionServiceIDs = production
     }
 
     var processTags: [String: Set<String>] {

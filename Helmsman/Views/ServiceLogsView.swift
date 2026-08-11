@@ -33,6 +33,8 @@ struct ServiceLogsView: View {
             }
             .pickerStyle(.segmented)
             .frame(width: 160)
+            .labelsHidden()
+            .accessibilityLabel("Stream")
 
             Toggle(isOn: $autoScroll) {
                 Label("Follow", systemImage: "arrow.down.to.line")

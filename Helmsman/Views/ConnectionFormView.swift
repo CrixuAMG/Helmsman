@@ -43,7 +43,7 @@ struct ConnectionFormView: View {
     private var generalSection: some View {
         FormSection(title: "General") {
             FormField(label: "Name") {
-                TextField("Production Server", text: $viewModel.name)
+                    TextField("Connection name", text: $viewModel.name)
             }
 
             FormField(label: "Accent Color") {
@@ -255,8 +255,8 @@ struct ConnectionFormView: View {
 
             Toggle("Auto Reconnect", isOn: $viewModel.autoReconnect)
             Toggle("Safe Mode", isOn: $viewModel.safeMode)
-            Toggle("Touch ID for Production Stops", isOn: $viewModel.touchIDProtected)
-                .help("Require Touch ID before stopping services marked as production.")
+            Toggle("Touch ID for Stops", isOn: $viewModel.touchIDProtected)
+                .help("Require Touch ID before stopping services on this connection.")
 
             FormField(label: "Log Retention") {
                 HStack {

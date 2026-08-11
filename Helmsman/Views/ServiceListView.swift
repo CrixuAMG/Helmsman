@@ -25,7 +25,6 @@ struct ServiceListView: View {
                         service: service,
                         isPerformingAction: viewModel.isPerformingAction(for: service),
                         isFavorite: viewModel.isFavorite(service.id),
-                        isProduction: viewModel.isProduction(service.id),
                         tags: viewModel.tags(for: service.id),
                         onToggleFavorite: { viewModel.toggleFavorite(for: service.id) },
                         onStart: { viewModel.start(service) },
@@ -36,10 +35,6 @@ struct ServiceListView: View {
                     .contextMenu {
                         Button(isFavoriteLabel(service.id)) {
                             viewModel.toggleFavorite(for: service.id)
-                        }
-
-                        Button(isProductionLabel(service.id)) {
-                            viewModel.toggleProduction(for: service.id)
                         }
 
                         Divider()
@@ -66,10 +61,6 @@ struct ServiceListView: View {
 
     private func isFavoriteLabel(_ serviceID: String) -> String {
         viewModel.isFavorite(serviceID) ? "Remove from Favorites" : "Add to Favorites"
-    }
-
-    private func isProductionLabel(_ serviceID: String) -> String {
-        viewModel.isProduction(serviceID) ? "Remove Production Mark" : "Mark as Production"
     }
 
     private var bulkActionBar: some View {

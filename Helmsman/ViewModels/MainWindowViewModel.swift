@@ -77,15 +77,6 @@ final class MainWindowViewModel {
         onConnectionDidChange?()
     }
 
-    func isProduction(_ serviceID: String) -> Bool {
-        connection.isProductionService(serviceID)
-    }
-
-    func toggleProduction(for serviceID: String) {
-        connection.toggleProduction(serviceID: serviceID)
-        onConnectionDidChange?()
-    }
-
     var tagNames: [String] {
         connection.tagNames
     }
@@ -126,9 +117,7 @@ final class MainWindowViewModel {
         }
         guard !actionableServices.isEmpty else { return }
 
-        if action == .stop,
-           connection.touchIDProtected,
-           actionableServices.contains(where: { connection.isProductionService($0.id) }) {
+        if action == .stop, connection.touchIDProtected {
             Task {
                 let authorized = await BiometricAuthenticator.authenticate(
                     reason: "Unlock to stop the '\(tag)' tag."
@@ -277,10 +266,10 @@ final class MainWindowViewModel {
     func stop(_ service: Service) {
         guard !isPerformingAction(for: service) else { return }
 
-        if connection.touchIDProtected && connection.isProductionService(service.id) {
+        if connection.touchIDProtected {
             Task {
                 let authorized = await BiometricAuthenticator.authenticate(
-                    reason: "Unlock to stop production service '\(service.name)'."
+                    reason: "Unlock to stop '\(service.name)'."
                 )
                 guard authorized else { return }
                 presentStopConfirmation(for: service)
@@ -401,10 +390,10 @@ final class MainWindowViewModel {
         guard !selectedServices.isEmpty else { return }
         let services = selectedServices
 
-        if connection.touchIDProtected && services.contains(where: { connection.isProductionService($0.id) }) {
+        if connection.touchIDProtected {
             Task {
                 let authorized = await BiometricAuthenticator.authenticate(
-                    reason: "Unlock to stop \(services.count) selected service(s), including production services."
+                    reason: "Unlock to stop \(services.count) selected service(s)."
                 )
                 guard authorized else { return }
                 presentBulkStopConfirmation(services: services)
@@ -447,12 +436,10 @@ final class MainWindowViewModel {
         let services = preset.matchingServices(in: services)
         guard !services.isEmpty else { return }
 
-        if preset.action == .stop,
-           connection.touchIDProtected,
-           services.contains(where: { connection.isProductionService($0.id) }) {
+        if preset.action == .stop, connection.touchIDProtected {
             Task {
                 let authorized = await BiometricAuthenticator.authenticate(
-                    reason: "Unlock to stop \(services.count) service(s), including production services."
+                    reason: "Unlock to stop \(services.count) service(s)."
                 )
                 guard authorized else { return }
                 presentPresetConfirmation(preset, services: services)

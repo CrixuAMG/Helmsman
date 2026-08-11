@@ -4,7 +4,6 @@ struct ServiceRowView: View {
     let service: Service
     let isPerformingAction: Bool
     let isFavorite: Bool
-    let isProduction: Bool
     let tags: [String]
     let onToggleFavorite: () -> Void
     let onStart: () -> Void
@@ -15,14 +14,6 @@ struct ServiceRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             StatusBadge(status: service.status)
-
-            if isProduction {
-                Image(systemName: "shield.lefthalf.filled")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.orange)
-                    .help("Production service — stops require Touch ID")
-            }
-
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(service.displayName)
