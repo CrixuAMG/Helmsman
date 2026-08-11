@@ -46,8 +46,8 @@ struct HelmsmanApp: App {
 
         WindowGroup(id: "main-window", for: UUID.self) { $connectionID in
             if let connectionID = connectionID {
-                MainWindowWrapper(connectionID: connectionID)
-                    .frame(minWidth: 700, minHeight: 500)
+                    MainWindowWrapper(connectionID: connectionID)
+                    .frame(minWidth: 960, minHeight: 500)
                     .preferredColorScheme(settings.theme.colorScheme)
             }
         }

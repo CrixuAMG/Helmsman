@@ -34,7 +34,9 @@ struct MainWindow: View {
                 .navigationSplitViewColumnWidth(min: 280, ideal: 320)
         } detail: {
             detailPane
+                .navigationSplitViewColumnWidth(min: 320, ideal: 480)
         }
+        .navigationSplitViewStyle(.balanced)
         .navigationTitle(connection.name)
         .toolbar {
             toolbarContent
@@ -159,6 +161,9 @@ struct MainWindow: View {
                 Text("Select a service from the list to view details.")
                     .font(.body)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 24)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -292,7 +297,31 @@ struct MainWindow: View {
                         Spacer()
                         Text("\(Int(connection.pollingInterval))s")
                             .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.secondary)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            if !viewModel.tagNames.isEmpty {
+                Section("Tags") {
+                    ForEach(viewModel.tagNames, id: \.self) { tag in
+                        let taggedServices = viewModel.services(for: tag)
+                        Button {
+                            viewModel.selectedServiceIDs = Set(taggedServices.map(\.id))
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "tag.fill")
+                                    .foregroundStyle(connection.accentColor)
+                                Text(tag)
+                                Spacer()
+                                Text("\(taggedServices.count)")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(taggedServices.isEmpty)
+                        .help("Select services tagged \(tag)")
                     }
                 }
             }

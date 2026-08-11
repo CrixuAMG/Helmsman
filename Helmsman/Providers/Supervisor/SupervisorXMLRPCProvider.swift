@@ -38,11 +38,13 @@ final class SupervisorXMLRPCProvider: ServiceManagerProvider, @unchecked Sendabl
 
     nonisolated func readProcessLog(_ name: String, stderr: Bool, offset: Int, maxBytes: Int) async throws -> ProcessLogChunk {
         let method = stderr ? "supervisor.readProcessStderrLog" : "supervisor.readProcessStdoutLog"
-        let response = try await callMethod(method, params: [.string(name), .int(offset), .int(maxBytes)], trimStrings: false)
+        // Store uses -1 for rolling-tail providers; XML-RPC requires a non-negative offset.
+        let safeOffset = max(0, offset)
+        let response = try await callMethod(method, params: [.string(name), .int(safeOffset), .int(maxBytes)], trimStrings: false)
         guard case .string(let content) = response else {
             throw ServiceError.actionFailed("Unexpected log response")
         }
-        return ProcessLogChunk(content: content, nextOffset: offset + content.count)
+        return ProcessLogChunk(content: content, nextOffset: safeOffset + content.utf8.count)
     }
 
     nonisolated func clearProcessLogs(_ name: String) async throws {

@@ -83,36 +83,39 @@ struct ServiceDetailView: View {
                     .controlSize(.small)
                     .frame(width: 188, alignment: .trailing)
             } else {
-                HStack(spacing: 8) {
-                    Button(action: onToggleFavorite) {
-                        Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
-                    }
-                    .help(isFavorite ? "Remove from favorites" : "Add to favorites")
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        Button(action: onToggleFavorite) {
+                            Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
+                        }
+                        .help(isFavorite ? "Remove from favorites" : "Add to favorites")
 
-                    Button(action: onToggleProduction) {
-                        Label(
-                            isProduction ? "Production" : "Mark Production",
-                            systemImage: isProduction ? "shield.lefthalf.filled" : "shield"
-                        )
-                    }
-                    .help(isProduction ? "Remove production mark" : "Mark as production service")
-                    .tint(isProduction ? .orange : .accentColor)
+                        Button(action: onToggleProduction) {
+                            Label(
+                                isProduction ? "Production" : "Mark Production",
+                                systemImage: isProduction ? "shield.lefthalf.filled" : "shield"
+                            )
+                        }
+                        .help(isProduction ? "Remove production mark" : "Mark as production service")
+                        .tint(isProduction ? .orange : .accentColor)
 
-                    Button(action: onStart) {
-                        Label("Start", systemImage: "play.fill")
-                    }
-                    .disabled(service.status == .running)
+                        Button(action: onStart) {
+                            Label("Start", systemImage: "play.fill")
+                        }
+                        .disabled(service.status == .running)
 
-                    Button(action: onStop) {
-                        Label("Stop", systemImage: "stop.fill")
-                    }
-                    .disabled(service.status == .stopped)
+                        Button(action: onStop) {
+                            Label("Stop", systemImage: "stop.fill")
+                        }
+                        .disabled(service.status == .stopped)
 
-                    Button(action: onRestart) {
-                        Label("Restart", systemImage: "arrow.clockwise")
+                        Button(action: onRestart) {
+                            Label("Restart", systemImage: "arrow.clockwise")
+                        }
                     }
+                    .buttonStyle(.bordered)
                 }
-                .buttonStyle(.bordered)
+                .frame(maxWidth: 420)
             }
         }
     }
