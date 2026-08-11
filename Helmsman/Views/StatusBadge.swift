@@ -7,6 +7,7 @@ struct StatusBadge: View {
         Circle()
             .fill(color)
             .frame(width: 10, height: 10)
+            .accessibilityLabel(status.displayName)
     }
 
     private var color: Color {

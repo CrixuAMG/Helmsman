@@ -238,10 +238,10 @@ final class ConnectionWindowViewModel {
         dockerContainer = ""
         dockerEndpoint = ""
         connectionMethod = .local
-        pollingInterval = 5
-        timeout = 30
-        autoReconnect = true
-        safeMode = true
+        pollingInterval = AppSettings.shared.defaultPollingInterval
+        timeout = AppSettings.shared.defaultTimeout
+        autoReconnect = AppSettings.shared.defaultAutoReconnect
+        safeMode = AppSettings.shared.defaultSafeMode
         touchIDProtected = false
         autoClearOldLogs = false
         logRetentionDays = 30

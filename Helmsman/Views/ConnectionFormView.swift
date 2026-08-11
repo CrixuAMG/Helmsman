@@ -332,18 +332,24 @@ struct ConnectionFormView: View {
     }
 
     private var isFormValid: Bool {
-        if viewModel.name.isEmpty { return false }
+        if viewModel.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
 
         switch viewModel.connectionMethod {
         case .local:
-            return !viewModel.localEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            return validURL(viewModel.localEndpoint)
         case .docker:
-            return !viewModel.dockerContainer.isEmpty && !viewModel.xmlrpcEndpoint.isEmpty
+            return !viewModel.dockerContainer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && validURL(viewModel.xmlrpcEndpoint)
         case .ssh:
             return !viewModel.host.isEmpty && !viewModel.username.isEmpty && !viewModel.supervisorctlPath.isEmpty
         case .xmlrpc:
-            return !viewModel.xmlrpcEndpoint.isEmpty
+            return validURL(viewModel.xmlrpcEndpoint)
         }
+    }
+
+    private func validURL(_ value: String) -> Bool {
+        guard let url = URL(string: value.trimmingCharacters(in: .whitespacesAndNewlines)) else { return false }
+        return url.scheme != nil && url.host != nil
     }
 }
 

@@ -7,6 +7,7 @@ struct ServiceLogsView: View {
 
     @State private var stream: LogStream = .stdout
     @State private var autoScroll = true
+    @State private var showClearConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -49,10 +50,15 @@ struct ServiceLogsView: View {
                     .foregroundStyle(.tertiary)
             }
 
-            Button(action: onClear) {
+            Button { showClearConfirmation = true } label: {
                 Label("Clear Logs", systemImage: "trash")
             }
             .font(.caption)
+            .confirmationDialog("Clear logs?", isPresented: $showClearConfirmation) {
+                Button("Clear Logs", role: .destructive, action: onClear)
+            } message: {
+                Text("All stored log output for this service will be removed.")
+            }
         }
     }
 

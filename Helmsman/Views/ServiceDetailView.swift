@@ -65,12 +65,12 @@ struct ServiceDetailView: View {
                 .frame(width: 24, height: 24)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(service.name)
+                Text(service.displayName)
                     .font(.title)
                     .fontWeight(.semibold)
 
-                if service.group != service.name {
-                    Text(service.group)
+                if let displayGroup = service.displayGroup {
+                    Text(displayGroup)
                         .font(.body)
                         .foregroundStyle(.secondary)
                 }

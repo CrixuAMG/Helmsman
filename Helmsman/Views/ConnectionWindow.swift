@@ -7,6 +7,7 @@ struct ConnectionWindow: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Connection.name) private var connections: [Connection]
     @State private var viewModel = ConnectionWindowViewModel()
+    @State private var connectionPendingDeletion: Connection?
     @Bindable private var monitor: ConnectionStatusMonitor
 
     init(monitor: ConnectionStatusMonitor) {
@@ -32,6 +33,20 @@ struct ConnectionWindow: View {
         .task {
             monitor.start(connections: connections)
         }
+        .alert("Delete Connection?", isPresented: Binding(
+            get: { connectionPendingDeletion != nil },
+            set: { if !$0 { connectionPendingDeletion = nil } }
+        ), presenting: connectionPendingDeletion) { connection in
+            Button("Delete", role: .destructive) {
+                viewModel.delete(connection)
+                connectionPendingDeletion = nil
+            }
+            Button("Cancel", role: .cancel) {
+                connectionPendingDeletion = nil
+            }
+        } message: { connection in
+            Text("\(connection.name) and its saved credentials will be removed.")
+        }
     }
 
     private var connectionList: some View {
@@ -51,7 +66,7 @@ struct ConnectionWindow: View {
                             }
                             Divider()
                             Button("Delete", role: .destructive) {
-                                viewModel.delete(connection)
+                                connectionPendingDeletion = connection
                             }
                         }
                 }
@@ -99,7 +114,7 @@ struct ConnectionWindow: View {
                     .font(.title)
                     .fontWeight(.semibold)
 
-                Text("\(connection.username)@\(connection.host):\(connection.port)")
+                Text(connectionSummary(connection))
                     .font(.body)
                     .foregroundStyle(.secondary)
             }
@@ -144,6 +159,19 @@ struct ConnectionWindow: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
+    }
+
+    private func connectionSummary(_ connection: Connection) -> String {
+        switch connection.connectionMethod {
+        case .local:
+            return connection.localEndpoint ?? "Local connection"
+        case .xmlrpc:
+            return connection.xmlrpcEndpoint ?? "XML-RPC connection"
+        case .docker:
+            return connection.dockerContainer.map { "Container: \($0)" } ?? "Docker connection"
+        case .ssh:
+            return "\(connection.username)@\(connection.host):\(connection.port)"
+        }
     }
 
     @ViewBuilder

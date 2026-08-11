@@ -25,13 +25,13 @@ struct ServiceRowView: View {
 
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(service.name)
+                Text(service.displayName)
                     .font(.body)
                     .fontWeight(.medium)
                     .lineLimit(1)
 
-                if service.group != service.name {
-                    Text(service.group)
+                if let displayGroup = service.displayGroup {
+                    Text(displayGroup)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -64,10 +64,10 @@ struct ServiceRowView: View {
                     .frame(width: 94, alignment: .trailing)
             } else {
                 HStack(spacing: 8) {
-                    favoriteButton
-                    actionButton("play.fill", action: onStart, disabled: service.status == .running, tint: .green)
-                    actionButton("stop.fill", action: onStop, disabled: service.status == .stopped, tint: .red)
-                    actionButton("arrow.clockwise", action: onRestart, disabled: false, tint: .blue)
+                     favoriteButton
+                     actionButton("play.fill", label: "Start", action: onStart, disabled: service.status == .running, tint: .green)
+                     actionButton("stop.fill", label: "Stop", action: onStop, disabled: service.status == .stopped, tint: .red)
+                     actionButton("arrow.clockwise", label: "Restart", action: onRestart, disabled: false, tint: .blue)
                 }
                 .opacity(isHovered ? 1 : 0.6)
             }
@@ -100,7 +100,7 @@ struct ServiceRowView: View {
         .help(isFavorite ? "Remove from favorites" : "Add to favorites")
     }
 
-    private func actionButton(_ icon: String, action: @escaping () -> Void, disabled: Bool, tint: Color) -> some View {
+    private func actionButton(_ icon: String, label: String, action: @escaping () -> Void, disabled: Bool, tint: Color) -> some View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .medium))
@@ -113,6 +113,8 @@ struct ServiceRowView: View {
         }
         .buttonStyle(.plain)
         .disabled(disabled)
+        .help(label)
+        .accessibilityLabel(label)
 
     }
 }

@@ -15,6 +15,15 @@ struct Service: Identifiable, Sendable, Equatable {
         group == name ? name : "\(group):\(name)"
     }
 
+    var displayName: String {
+        name == "00" && group != name ? group : name
+    }
+
+    var displayGroup: String? {
+        guard group != name, name != "00" else { return nil }
+        return group
+    }
+
     init(
         name: String,
         group: String,

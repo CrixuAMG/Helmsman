@@ -7,13 +7,15 @@ struct ServiceOverviewView: View {
     let memoryDisplayUnit: MemoryDisplayUnit
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            statusSection
-            Divider()
-            detailsSection
-            Divider()
-            metricsGraphSection
-            Spacer(minLength: 0)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                statusSection
+                Divider()
+                detailsSection
+                Divider()
+                metricsGraphSection
+                Spacer(minLength: 0)
+            }
         }
     }
 

@@ -5,6 +5,7 @@ struct ServiceTimelineView: View {
     let eventStore: ProcessEventStore
     let metricsStore: ProcessMetricsStore
     let memoryDisplayUnit: MemoryDisplayUnit
+    @State private var showClearConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -73,10 +74,15 @@ struct ServiceTimelineView: View {
                 Spacer()
 
                 if !events.isEmpty {
-                    Button("Clear") {
-                        eventStore.clear(for: service.id)
-                    }
+                    Button("Clear") { showClearConfirmation = true }
                     .font(.caption)
+                    .confirmationDialog("Clear timeline?", isPresented: $showClearConfirmation) {
+                        Button("Clear Events", role: .destructive) {
+                            eventStore.clear(for: service.id)
+                        }
+                    } message: {
+                        Text("All recorded lifecycle events for this service will be removed.")
+                    }
                 }
             }
 
