@@ -16,12 +16,16 @@ struct Service: Identifiable, Sendable, Equatable {
     }
 
     var displayName: String {
-        name == "00" && group != name ? group : name
+        isNumericPlaceholder && group != name ? group : name
     }
 
     var displayGroup: String? {
-        guard group != name, name != "00" else { return nil }
+        guard group != name, !isNumericPlaceholder else { return nil }
         return group
+    }
+
+    private var isNumericPlaceholder: Bool {
+        name.count <= 2 && !name.isEmpty && name.allSatisfy { $0.isNumber }
     }
 
     init(

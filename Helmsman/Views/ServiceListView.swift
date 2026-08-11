@@ -7,7 +7,7 @@ struct ServiceListView: View {
         VStack(spacing: 0) {
             if viewModel.services.isEmpty && !viewModel.isLoading {
                 emptyState
-            } else if viewModel.filteredServices.isEmpty && !viewModel.searchText.isEmpty {
+            } else if viewModel.filteredServices.isEmpty && (!viewModel.searchText.isEmpty || viewModel.activeTag != nil) {
                 noSearchResults
             } else {
                 serviceList
@@ -124,13 +124,20 @@ struct ServiceListView: View {
             Text("No Matches")
                 .font(.headline)
 
-            Text("No services match \"\(viewModel.searchText)\".")
+            Text(noResultsDescription)
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+    }
+
+    private var noResultsDescription: String {
+        if let activeTag = viewModel.activeTag {
+            return "No services are assigned to \"\(activeTag)\"."
+        }
+        return "No services match \"\(viewModel.searchText)\"."
     }
 
     private var emptyState: some View {

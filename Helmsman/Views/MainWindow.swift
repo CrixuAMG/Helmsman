@@ -307,7 +307,7 @@ struct MainWindow: View {
                     ForEach(viewModel.tagNames, id: \.self) { tag in
                         let taggedServices = viewModel.services(for: tag)
                         Button {
-                            viewModel.selectedServiceIDs = Set(taggedServices.map(\.id))
+                            viewModel.toggleTagFilter(tag)
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "tag.fill")
@@ -317,6 +317,11 @@ struct MainWindow: View {
                                 Text("\(taggedServices.count)")
                                     .font(.caption.monospacedDigit())
                                     .foregroundStyle(.secondary)
+                                if viewModel.activeTag == tag {
+                                    Image(systemName: "checkmark")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(connection.accentColor)
+                                }
                             }
                         }
                         .buttonStyle(.plain)

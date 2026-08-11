@@ -10,6 +10,7 @@ final class MainWindowViewModel {
     var activeProviderName: String?
     var lastError: Error?
     var searchText: String = ""
+    var activeTag: String? = nil
     var retryCount: Int = 0
     private(set) var activeActionServiceIDs: Set<String> = []
 
@@ -35,13 +36,23 @@ final class MainWindowViewModel {
     }
 
     var filteredServices: [Service] {
-        if searchText.isEmpty {
-            return services
+        var result = services
+        if let activeTag {
+            let taggedIDs = connection.processTags[activeTag] ?? []
+            result = result.filter { taggedIDs.contains($0.id) }
         }
-        return services.filter {
+        if !searchText.isEmpty {
+            result = result.filter {
             $0.name.localizedCaseInsensitiveContains(searchText) ||
             $0.group.localizedCaseInsensitiveContains(searchText)
         }
+        }
+        return result
+    }
+
+    func toggleTagFilter(_ tag: String) {
+        activeTag = activeTag == tag ? nil : tag
+        selectedServiceIDs.removeAll()
     }
 
     var favoriteServiceIDs: Set<String> {
