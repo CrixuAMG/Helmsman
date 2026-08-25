@@ -204,7 +204,7 @@ final class ServiceManager {
                 container: container,
                 supervisorctlPath: config.supervisorctlPath,
                 supervisorConfigPath: config.supervisorConfigPath,
-                supervisorEndpoint: config.xmlrpcEndpoint ?? "http://127.0.0.1:9001/RPC2",
+                supervisorEndpoint: config.xmlrpcEndpoint,
                 username: config.username,
                 password: config.password,
                 timeout: config.timeout,

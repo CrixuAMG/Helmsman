@@ -2,7 +2,8 @@ import Foundation
 import Security
 
 enum KeychainManager {
-    private static let service = "com.christiankaal.overseer"
+    private static let service = "com.christiankaal.helmsman"
+    private static let legacyService = "com.christiankaal.overseer"
 
     static func store(password: String, for connectionID: UUID) throws {
         let data = Data(password.utf8)
@@ -19,22 +20,26 @@ enum KeychainManager {
     }
 
     static func retrievePassword(for connectionID: UUID) -> String? {
-        var query = query(for: connectionID)
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        for serviceName in [service, legacyService] {
+            var query = query(for: connectionID, service: serviceName)
+            query[kSecReturnData as String] = true
+            query[kSecMatchLimit as String] = kSecMatchLimitOne
 
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-        guard status == errSecSuccess, let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
+            var result: AnyObject?
+            let status = SecItemCopyMatching(query as CFDictionary, &result)
+            if status == errSecSuccess, let data = result as? Data {
+                return String(data: data, encoding: .utf8)
+            }
+        }
+        return nil
     }
 
     static func deletePassword(for connectionID: UUID) {
-        SecItemDelete(query(for: connectionID) as CFDictionary)
+        SecItemDelete(query(for: connectionID, service: service) as CFDictionary)
+        SecItemDelete(query(for: connectionID, service: legacyService) as CFDictionary)
     }
 
-    private static func query(for connectionID: UUID) -> [String: Any] {
+    private static func query(for connectionID: UUID, service: String = service) -> [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

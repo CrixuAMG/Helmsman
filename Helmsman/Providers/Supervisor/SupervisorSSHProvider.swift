@@ -46,26 +46,26 @@ final class SupervisorSSHProvider: ServiceManagerProvider, @unchecked Sendable {
     }
 
     nonisolated func getAllProcesses() async throws -> [SupervisorProcess] {
-        let output = try await executeSSH("\(supervisorctlPath) status", allowsNonZeroExit: true)
+        let output = try await executeSSH("\(Self.shellQuote(supervisorctlPath)) status", allowsNonZeroExit: true)
         return Self.parseStatusOutput(output)
     }
 
     nonisolated func startProcess(_ name: String) async throws {
-        let output = try await executeSSH("\(supervisorctlPath) start \(name)")
+        let output = try await executeSSH("\(Self.shellQuote(supervisorctlPath)) start \(Self.shellQuote(name))")
         if output.contains("ERROR") {
             throw ProviderError.commandFailed(output)
         }
     }
 
     nonisolated func stopProcess(_ name: String) async throws {
-        let output = try await executeSSH("\(supervisorctlPath) stop \(name)")
+        let output = try await executeSSH("\(Self.shellQuote(supervisorctlPath)) stop \(Self.shellQuote(name))")
         if output.contains("ERROR") {
             throw ProviderError.commandFailed(output)
         }
     }
 
     nonisolated func restartProcess(_ name: String) async throws {
-        let output = try await executeSSH("\(supervisorctlPath) restart \(name)")
+        let output = try await executeSSH("\(Self.shellQuote(supervisorctlPath)) restart \(Self.shellQuote(name))")
         if output.contains("ERROR") {
             throw ProviderError.commandFailed(output)
         }
@@ -85,18 +85,18 @@ final class SupervisorSSHProvider: ServiceManagerProvider, @unchecked Sendable {
     }
 
     nonisolated func readProcessLog(_ name: String, stderr: Bool, offset: Int, maxBytes: Int) async throws -> ProcessLogChunk {
-        let quoted = Self.quote(name)
+        let quoted = Self.shellQuote(name)
         let variants: [String]
         if stderr {
             variants = [
-                "\(supervisorctlPath) tail -\(maxBytes) \(quoted) stderr",
-                "\(supervisorctlPath) tail --stderr \(quoted)",
-                "\(supervisorctlPath) tail \(quoted) stderr",
+                "\(Self.shellQuote(supervisorctlPath)) tail -\(maxBytes) \(quoted) stderr",
+                "\(Self.shellQuote(supervisorctlPath)) tail --stderr \(quoted)",
+                "\(Self.shellQuote(supervisorctlPath)) tail \(quoted) stderr",
             ]
         } else {
             variants = [
-                "\(supervisorctlPath) tail -\(maxBytes) \(quoted)",
-                "\(supervisorctlPath) tail \(quoted)",
+                "\(Self.shellQuote(supervisorctlPath)) tail -\(maxBytes) \(quoted)",
+                "\(Self.shellQuote(supervisorctlPath)) tail \(quoted)",
             ]
         }
 
@@ -118,14 +118,14 @@ final class SupervisorSSHProvider: ServiceManagerProvider, @unchecked Sendable {
     }
 
     nonisolated func clearProcessLogs(_ name: String) async throws {
-        let output = try await executeSSH("\(supervisorctlPath) clear \(Self.quote(name))")
+        let output = try await executeSSH("\(Self.shellQuote(supervisorctlPath)) clear \(Self.shellQuote(name))")
         if output.contains("ERROR") {
             throw ProviderError.commandFailed(output)
         }
     }
 
-    private nonisolated static func quote(_ value: String) -> String {
-        value.contains(" ") ? "'\(value)'" : value
+    private nonisolated static func shellQuote(_ value: String) -> String {
+        "'" + value.replacingOccurrences(of: "'", with: "'\\\''") + "'"
     }
 
     private nonisolated func executeSSH(_ command: String, allowsNonZeroExit: Bool = false) async throws -> String {

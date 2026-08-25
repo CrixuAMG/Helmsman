@@ -37,7 +37,7 @@ open Helmsman.xcodeproj
 1. Launch Helmsman
 2. Click **+** to create a new connection
 3. Choose your connection method:
-   - **Local**: Runs `supervisorctl` directly on your Mac
+   - **Local**: Connects to Supervisor's local XML-RPC endpoint
    - **SSH**: Connects to a remote server via SSH
    - **Docker**: Runs `supervisorctl` inside a Docker container
    - **XML-RPC**: Connects to Supervisor's XML-RPC API
@@ -49,8 +49,9 @@ open Helmsman.xcodeproj
 
 | Setting | Description |
 |---------|-------------|
-| **supervisorctl Path** | Path to `supervisorctl` binary. Auto-detected from common locations. |
-| **Config Path** | Optional path to `supervisord.conf` (passed via `-c` flag) |
+| **Local XML-RPC URL** | URL of Supervisor's local XML-RPC endpoint. |
+| **supervisorctl Path** | Used by Docker exec and SSH connections. |
+| **Config Path** | Optional path to `supervisord.conf` for Docker exec and SSH. |
 | **Polling Interval** | How often to refresh service status (default: 5 seconds) |
 | **Safe Mode** | Show confirmation dialogs before start/stop/restart actions |
 | **Auto-reconnect** | Automatically reconnect on connection loss |
@@ -92,7 +93,7 @@ The UI is completely provider-agnostic — switching between Local, SSH, Docker,
 
 ## Known Limitations
 
-- **App Sandbox**: This app cannot be distributed via the Mac App Store because it requires spawning external processes (`supervisorctl`, `ssh`, `docker`), which is incompatible with App Sandbox. Distribution is limited to direct download or Homebrew.
+- **App Sandbox**: App Store builds use App Sandbox. Local `supervisorctl` and config paths must be selected through the file picker. Docker connections use Docker Engine HTTP API over a configured TCP/HTTPS endpoint; Helmsman does not invoke Docker CLI or access Docker Unix socket.
 - **macOS 15+ only**: Uses modern Swift features (Observation framework, Swift Concurrency) that require macOS 15 Sequoia.
 - **SSH host key verification**: Currently disabled (`StrictHostKeyChecking=no`) for simplicity. This may be flagged during security review.
 

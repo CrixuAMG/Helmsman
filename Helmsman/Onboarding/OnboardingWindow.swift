@@ -12,7 +12,6 @@ struct OnboardingWindow: View {
         self.onDismiss = onDismiss
         let steps = [
             OnboardingStep(id: "welcome", title: "Welcome"),
-            OnboardingStep(id: "local-setup", title: "Local Setup"),
             OnboardingStep(id: "first-connection", title: "Connections"),
             OnboardingStep(id: "appearance", title: "Appearance"),
         ]
@@ -157,8 +156,6 @@ struct OnboardingWindow: View {
         switch state.currentStep.id {
         case "welcome":
             WelcomeStep(state: state)
-        case "local-setup":
-            LocalSetupStep(state: state)
         case "first-connection":
             FirstConnectionStep(state: state)
         case "appearance":

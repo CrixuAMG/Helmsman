@@ -14,7 +14,7 @@ struct LocalSetupStep: View {
         OnboardingStepPage(
             systemImage: "terminal.fill",
             title: "Find Supervisor",
-            subtitle: "Helmsman looks for supervisorctl so it can manage services running on this Mac."
+            subtitle: "Optional for local connections. Select supervisorctl so App Sandbox can access it."
         ) {
             statusView
 
@@ -39,7 +39,7 @@ struct LocalSetupStep: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Searching common install locations")
                             .fontWeight(.medium)
-                        Text("Checking Homebrew and system paths for supervisorctl.")
+                        Text("Checking common install locations for supervisorctl.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }
@@ -106,7 +106,7 @@ struct LocalSetupStep: View {
                     .disabled(supervisorPath.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
 
-                Text("Common paths include /usr/local/bin/supervisorctl and /opt/homebrew/bin/supervisorctl.")
+                Text("Select executable through Browse in connection settings. Common paths include /usr/local/bin/supervisorctl and /opt/homebrew/bin/supervisorctl.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

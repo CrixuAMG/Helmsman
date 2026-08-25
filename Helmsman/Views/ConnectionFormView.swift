@@ -89,8 +89,20 @@ struct ConnectionFormView: View {
                     TextField("container-name", text: $viewModel.dockerContainer)
                 }
 
+                FormField(label: "Docker Engine URL") {
+                    TextField("http://127.0.0.1:2375", text: $viewModel.dockerEndpoint)
+                        .help("Use Docker Engine TCP API. Docker Desktop must expose a TCP endpoint.")
+                    if viewModel.dockerEndpoint.lowercased().hasPrefix("http://") {
+                        Label("Use HTTP only on a trusted local interface; HTTPS is recommended for remote Docker.", systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
                 FormField(label: "Supervisor URL") {
-                    TextField("http://127.0.0.1:9001/RPC2", text: $viewModel.xmlrpcEndpoint)
+                    TextField("Optional; use Docker exec", text: $viewModel.xmlrpcEndpoint)
+                        .help("Leave empty to execute supervisorctl inside container. Set only when using Supervisor XML-RPC.")
                 }
             }
 
@@ -339,7 +351,7 @@ struct ConnectionFormView: View {
             return validURL(viewModel.localEndpoint)
         case .docker:
             return !viewModel.dockerContainer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                && validURL(viewModel.xmlrpcEndpoint)
+                && validURL(viewModel.dockerEndpoint)
         case .ssh:
             return !viewModel.host.isEmpty && !viewModel.username.isEmpty && !viewModel.supervisorctlPath.isEmpty
         case .xmlrpc:

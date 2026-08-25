@@ -60,14 +60,14 @@ final class ConnectionWindowViewModel {
 
         switch connectionMethod {
         case .local:
-            return URL(string: localEndpoint) != nil
-                && !localEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            return validURL(localEndpoint)
         case .docker:
-            return !host.isEmpty && port > 0 && !dockerContainer.isEmpty && !supervisorctlPath.isEmpty
+            return !dockerContainer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && validURL(dockerEndpoint)
         case .ssh:
             return !host.isEmpty && port > 0 && !username.isEmpty && !supervisorctlPath.isEmpty && hasValidSSHCredentials
         case .xmlrpc:
-            return URL(string: xmlrpcEndpoint) != nil
+            return validURL(xmlrpcEndpoint)
         }
     }
 
@@ -164,6 +164,10 @@ final class ConnectionWindowViewModel {
             if port == 0 || port == 22 { port = 2375 }
             username = ""
             password = ""
+            xmlrpcEndpoint = ""
+            if dockerEndpoint.isEmpty {
+                dockerEndpoint = "http://127.0.0.1:2375"
+            }
         case .ssh:
             if host == "127.0.0.1" { host = "" }
             if port == 0 || port == 2375 { port = 22 }
@@ -210,7 +214,7 @@ final class ConnectionWindowViewModel {
         xmlrpcEndpoint = connection.xmlrpcEndpoint ?? "http://127.0.0.1:9001/RPC2"
         localEndpoint = connection.localEndpoint ?? "http://127.0.0.1:9001/RPC2"
         dockerContainer = connection.dockerContainer ?? ""
-        dockerEndpoint = connection.dockerEndpoint ?? ""
+        dockerEndpoint = connection.dockerEndpoint ?? "http://127.0.0.1:2375"
         connectionMethod = connection.connectionMethod
         pollingInterval = connection.pollingInterval
         timeout = connection.timeout
@@ -236,7 +240,7 @@ final class ConnectionWindowViewModel {
         xmlrpcEndpoint = "http://127.0.0.1:9001/RPC2"
         localEndpoint = "http://127.0.0.1:9001/RPC2"
         dockerContainer = ""
-        dockerEndpoint = ""
+        dockerEndpoint = "http://127.0.0.1:2375"
         connectionMethod = .local
         pollingInterval = AppSettings.shared.defaultPollingInterval
         timeout = AppSettings.shared.defaultTimeout
@@ -341,7 +345,7 @@ final class ConnectionWindowViewModel {
                 container: container,
                 supervisorctlPath: config.supervisorctlPath,
                 supervisorConfigPath: config.supervisorConfigPath,
-                supervisorEndpoint: config.xmlrpcEndpoint ?? "http://127.0.0.1:9001/RPC2",
+                supervisorEndpoint: config.xmlrpcEndpoint,
                 username: config.username,
                 password: config.password,
                 timeout: config.timeout,
@@ -405,5 +409,10 @@ final class ConnectionWindowViewModel {
 
     private func optionalText(_ text: String) -> String? {
         text.isEmpty ? nil : text
+    }
+
+    private func validURL(_ value: String) -> Bool {
+        guard let url = URL(string: value.trimmingCharacters(in: .whitespacesAndNewlines)) else { return false }
+        return ["http", "https"].contains(url.scheme?.lowercased()) && url.host != nil
     }
 }
