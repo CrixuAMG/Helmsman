@@ -225,7 +225,7 @@ final class MainWindowViewModel {
         } catch {
             errorAlert = ErrorAlert(
                 title: "Action Failed",
-                message: "Failed to clear logs for '\(service.name)': \(error.localizedDescription)",
+                message: "Failed to clear logs for '\(service.displayName)': \(error.localizedDescription)",
                 retryCount: 0,
                 onRetry: { [weak self] in
                     await self?.clearLogs(for: service)
@@ -253,7 +253,7 @@ final class MainWindowViewModel {
         if connection.safeMode {
             safeModeAlert = SafeModeAlert(
                 title: "Start Service",
-                message: "Are you sure you want to start '\(service.name)'?",
+                message: "Are you sure you want to start '\(service.displayName)'?",
                 action: { [weak self] in
                     await self?.performStart(service)
                 }
@@ -269,7 +269,7 @@ final class MainWindowViewModel {
         if connection.touchIDProtected {
             Task {
                 let authorized = await BiometricAuthenticator.authenticate(
-                    reason: "Unlock to stop '\(service.name)'."
+                    reason: "Unlock to stop '\(service.displayName)'."
                 )
                 guard authorized else { return }
                 presentStopConfirmation(for: service)
@@ -283,7 +283,7 @@ final class MainWindowViewModel {
         if connection.safeMode {
             safeModeAlert = SafeModeAlert(
                 title: "Stop Service",
-                message: "Are you sure you want to stop '\(service.name)'?",
+                message: "Are you sure you want to stop '\(service.displayName)'?",
                 action: { [weak self] in
                     await self?.performStop(service)
                 }
@@ -299,7 +299,7 @@ final class MainWindowViewModel {
         if connection.safeMode {
             safeModeAlert = SafeModeAlert(
                 title: "Restart Service",
-                message: "Are you sure you want to restart '\(service.name)'?",
+                message: "Are you sure you want to restart '\(service.displayName)'?",
                 action: { [weak self] in
                     await self?.performRestart(service)
                 }
@@ -319,7 +319,7 @@ final class MainWindowViewModel {
         } catch {
             errorAlert = ErrorAlert(
                 title: "Action Failed",
-                message: "Failed to start '\(service.name)': \(error.localizedDescription)",
+                message: "Failed to start '\(service.displayName)': \(error.localizedDescription)",
                 retryCount: 0,
                 onRetry: { [weak self] in
                     await self?.performStart(service)
@@ -339,7 +339,7 @@ final class MainWindowViewModel {
         } catch {
             errorAlert = ErrorAlert(
                 title: "Action Failed",
-                message: "Failed to stop '\(service.name)': \(error.localizedDescription)",
+                message: "Failed to stop '\(service.displayName)': \(error.localizedDescription)",
                 retryCount: 0,
                 onRetry: { [weak self] in
                     await self?.performStop(service)
@@ -359,7 +359,7 @@ final class MainWindowViewModel {
         } catch {
             errorAlert = ErrorAlert(
                 title: "Action Failed",
-                message: "Failed to restart '\(service.name)': \(error.localizedDescription)",
+                message: "Failed to restart '\(service.displayName)': \(error.localizedDescription)",
                 retryCount: 0,
                 onRetry: { [weak self] in
                     await self?.performRestart(service)
@@ -453,7 +453,7 @@ final class MainWindowViewModel {
         if connection.safeMode {
             safeModeAlert = SafeModeAlert(
                 title: "\(preset.action.displayName.uppercased()): \(preset.title)",
-                message: "This will \(preset.action.verb) \(services.count) service(s):\n\n\(services.map(\.name).joined(separator: "\n"))",
+                message: "This will \(preset.action.verb) \(services.count) service(s):\n\n\(services.map(\.displayName).joined(separator: "\n"))",
                 action: { [weak self] in
                     await self?.performBulk(preset.action, services: services)
                 }
@@ -467,7 +467,7 @@ final class MainWindowViewModel {
         if connection.safeMode {
             safeModeAlert = SafeModeAlert(
                 title: "\(action.displayName.uppercased()): \(tag)",
-                message: "This will \(action.verb) \(services.count) service(s) in the '\(tag)' tag:\n\n\(services.map(\.name).joined(separator: "\n"))",
+                message: "This will \(action.verb) \(services.count) service(s) in the '\(tag)' tag:\n\n\(services.map(\.displayName).joined(separator: "\n"))",
                 action: { [weak self] in
                     await self?.performBulk(action, services: services)
                 }
@@ -478,7 +478,7 @@ final class MainWindowViewModel {
     }
 
     private func bulkConfirmationMessage(action: String) -> String {
-        let names = selectedServices.prefix(12).map(\.name)
+        let names = selectedServices.prefix(12).map(\.displayName)
         let suffix = selectedServices.count > 12 ? "\n…and \(selectedServices.count - 12) more" : ""
         return "This will \(action) \(selectedServices.count) service(s):\n\n\(names.joined(separator: "\n"))\(suffix)"
     }

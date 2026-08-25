@@ -28,15 +28,16 @@ struct MainWindow: View {
     var body: some View {
         NavigationSplitView {
             sidebar
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240)
+                .navigationSplitViewColumnWidth(min: 180, ideal: 220)
         } content: {
             ServiceListView(viewModel: viewModel)
-                .navigationSplitViewColumnWidth(min: 280, ideal: 320)
+                .navigationSplitViewColumnWidth(min: 240, ideal: 300)
         } detail: {
             detailPane
-                .navigationSplitViewColumnWidth(min: 320, ideal: 480)
+                .navigationSplitViewColumnWidth(min: 280, ideal: 420)
         }
-        .navigationSplitViewStyle(.balanced)
+        // Keep detail usable when window cannot show all three columns at full width.
+        .navigationSplitViewStyle(.prominentDetail)
         .navigationTitle(connection.name)
         .toolbar {
             toolbarContent
@@ -180,10 +181,10 @@ struct MainWindow: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
-                    ForEach(viewModel.selectedServices.sorted { $0.name < $1.name }) { service in
+                    ForEach(viewModel.selectedServices.sorted { $0.displayName < $1.displayName }) { service in
                         HStack(spacing: 8) {
                             StatusBadge(status: service.status)
-                            Text(service.name)
+                            Text(service.displayName)
                                 .font(.body)
                             Spacer()
                         }
@@ -349,7 +350,7 @@ struct MainWindow: View {
             }
         }
 
-        ToolbarItem(placement: .primaryAction) {
+        ToolbarItem(placement: .secondaryAction) {
             Button {
                 showGraphSheet = true
             } label: {
@@ -358,7 +359,7 @@ struct MainWindow: View {
             .disabled(viewModel.services.isEmpty)
         }
 
-        ToolbarItem(placement: .primaryAction) {
+        ToolbarItem(placement: .secondaryAction) {
             Menu {
                 if viewModel.tagNames.isEmpty {
                     Text("No process tags configured")

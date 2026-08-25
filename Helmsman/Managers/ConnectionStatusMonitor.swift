@@ -127,7 +127,7 @@ final class ConnectionStatusMonitor {
             let recent = restartWindows[event.serviceID] ?? []
             if recent.count >= restartThreshold, !notifiedServiceIDs.contains(event.serviceID) {
                 notifiedServiceIDs.insert(event.serviceID)
-                let name = services.first(where: { $0.id == event.serviceID })?.name ?? event.serviceID
+                let name = services.first(where: { $0.id == event.serviceID })?.displayName ?? event.serviceID
                 postNotification(
                     title: "Frequent Restarts",
                     body: "\(name) on \(connection.name) restarted \(recent.count) times in the last \(Int(restartWindowInterval / 60)) minutes."

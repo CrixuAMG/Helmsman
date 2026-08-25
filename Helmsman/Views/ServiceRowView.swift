@@ -49,19 +49,7 @@ struct ServiceRowView: View {
 
             Spacer()
 
-            if isPerformingAction {
-                ProgressView()
-                    .controlSize(.small)
-                    .frame(width: 94, alignment: .trailing)
-            } else {
-                HStack(spacing: 8) {
-                     favoriteButton
-                     actionButton("play.fill", label: "Start", action: onStart, disabled: service.status == .running, tint: .green)
-                     actionButton("stop.fill", label: "Stop", action: onStop, disabled: service.status == .stopped, tint: .red)
-                     actionButton("arrow.clockwise", label: "Restart", action: onRestart, disabled: false, tint: .blue)
-                }
-                .opacity(isHovered ? 1 : 0.6)
-            }
+            actions
 
         }
         .padding(.vertical, 4)
@@ -73,6 +61,39 @@ struct ServiceRowView: View {
 
         .onHover { hovering in
             isHovered = hovering
+        }
+    }
+
+    @ViewBuilder
+    private var actions: some View {
+        if isPerformingAction {
+            ProgressView()
+                .controlSize(.small)
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    favoriteButton
+                    actionButton("play.fill", label: "Start", action: onStart, disabled: service.status == .running, tint: .green)
+                    actionButton("stop.fill", label: "Stop", action: onStop, disabled: service.status == .stopped, tint: .red)
+                    actionButton("arrow.clockwise", label: "Restart", action: onRestart, disabled: false, tint: .blue)
+                }
+
+                Menu {
+                    Button(isFavorite ? "Remove from Favorites" : "Add to Favorites", action: onToggleFavorite)
+                    Divider()
+                    Button("Start", action: onStart)
+                        .disabled(service.status == .running)
+                    Button("Stop", action: onStop)
+                        .disabled(service.status == .stopped)
+                    Button("Restart", action: onRestart)
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 15, weight: .medium))
+                        .frame(width: 26, height: 26)
+                }
+                .menuStyle(.borderlessButton)
+            }
+            .opacity(isHovered ? 1 : 0.6)
         }
     }
 

@@ -132,6 +132,19 @@ api:worker-1                       FATAL     Exited too quickly
 
     // MARK: - Event Detection
 
+    @Test func testServiceDisplayUsesProcessNameForNumericNames() {
+        let service = Service(
+            name: "00",
+            group: "command",
+            status: .running,
+            description: "",
+            pid: 123
+        )
+
+        #expect(service.displayName == "command 00")
+        #expect(service.displayGroup == nil)
+    }
+
     private func makeService(name: String, status: ServiceStatus, pid: Int, uptime: TimeInterval? = nil) -> Service {
         Service(
             name: name,

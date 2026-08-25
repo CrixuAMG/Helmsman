@@ -43,9 +43,9 @@ struct ProcessTagsSheetView: View {
                                     set: { _ in viewModel.toggleTag(tag, for: service.id) }
                                 )) {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(service.name)
-                                        if service.group != service.name {
-                                            Text(service.group)
+                                        Text(service.displayName)
+                                        if let displayGroup = service.displayGroup {
+                                            Text(displayGroup)
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
                                         }

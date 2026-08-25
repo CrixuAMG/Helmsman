@@ -16,15 +16,18 @@ struct Service: Identifiable, Sendable, Equatable {
     }
 
     var displayName: String {
-        isNumericPlaceholder && group != name ? group : name
+        if isNumericProcessName, group != name {
+            return "\(group) \(name)"
+        }
+        return name
     }
 
     var displayGroup: String? {
-        guard group != name, !isNumericPlaceholder else { return nil }
+        guard group != name, !isNumericProcessName else { return nil }
         return group
     }
 
-    private var isNumericPlaceholder: Bool {
+    private var isNumericProcessName: Bool {
         name.count <= 2 && !name.isEmpty && name.allSatisfy { $0.isNumber }
     }
 
